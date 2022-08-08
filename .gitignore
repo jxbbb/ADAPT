@@ -40,9 +40,13 @@ tmp*.py
 linjli
 ./datasets
 /datasets
-/mdoels
-# ./models
-
+/models
+*.zip
+./models
+/docs/
+./docs/
+*.jsonl
+*.json
 
 # compiled files #
 *.pyc
