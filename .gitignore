@@ -1,0 +1,79 @@
+# @linjli
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.so
+# maskrcnn_benchmark.egg-info/
+cpu_soft_nms.egg-info/
+build/
+dist/
+src/evalcap/coco_caption/
+src/evalcap/cider/
+src/evalcap/coco_caption
+src/evalcap/cider
+# amulet/longer_seq_exp_linjie
+
+.vscode 
+
+# script
+tmp_all/script/
+
+# Philly-realted #
+pt/
+.ptconfig
+.azureml
+.amltconfig
+
+
+
+# Project-related   #
+*/*results*/
+*results*/
+tmp*/
+cache/*
+*/cache*/
+tmp*.py
+*pickle
+*output*/
+*/*output*/
+linjli
+./datasets
+# ./models
+
+
+# compiled files #
+*.pyc
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+.ipynb_checkpoints/
+*.swp
+*.vscode/
+*.idea/
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
