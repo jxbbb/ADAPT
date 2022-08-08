@@ -39,6 +39,8 @@ tmp*.py
 */*output*/
 linjli
 ./datasets
+/datasets
+/mdoels
 # ./models
 
 
