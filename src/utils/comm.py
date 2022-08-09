@@ -13,24 +13,24 @@ import os
 def dist_init(args):
     if 'OMPI_COMM_WORLD_SIZE' in os.environ:
         
-        master_addr = os.environ.get("MASTER_ADDR", 'localhost')
-        master_port = os.environ.get("MASTER_PORT", 12345)
-        master_uri = f"tcp://{master_addr}:{master_port}" #if master_addr else 'localhost'
+        # master_addr = os.environ.get("MASTER_ADDR", 'localhost')
+        # master_port = os.environ.get("MASTER_PORT", 23485)
+        # master_uri = f"tcp://{master_addr}:{master_port}" #if master_addr else 'localhost'
         world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
-        world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
-        local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
-        local_size = int(os.environ['OMPI_COMM_WORLD_LOCAL_SIZE'])
+        # world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+        # local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+        # local_size = int(os.environ['OMPI_COMM_WORLD_LOCAL_SIZE'])
         args.num_gpus = world_size
         args.distributed = args.num_gpus > 1
-        args.local_rank = local_rank
+        # args.local_rank = local_rank
         if args.distributed:
-            LOGGER.info(f"OMPI Init distributed training on local rank {args.local_rank}, global rank {world_rank}, with local_size {local_size}, world_size {world_size}")
+            # LOGGER.info(f"OMPI Init distributed training on local rank {args.local_rank}, global rank {world_rank}, with local_size {local_size}, world_size {world_size}")
             torch.cuda.set_device(args.local_rank)
             dist.init_process_group(
                 backend='nccl',
-                init_method=master_uri,
-                world_size=world_size,
-                rank=world_rank,
+                # init_method=master_uri,
+                # world_size=world_size,
+                # rank=world_rank,
             )
             synchronize()
     elif 'WORLD_SIZE' in os.environ:
