@@ -134,11 +134,7 @@ class VisionLanguageTSVDataset(object):
         for img_idx in set(self.img_line_list):
             row = self.get_row_from_tsv(self.cap_tsv, img_idx)
             for cap_idx, data in enumerate(json.loads(row[1])):
-
-                if 'action' in data.keys() and 'justification' in data.keys():
-                    self.caption_on_memory[(img_idx, cap_idx)] = data['action'] + ' ' + data['justification']
-                else:
-                    self.caption_on_memory[(img_idx, cap_idx)] = data['caption']
+                self.caption_on_memory[(img_idx, cap_idx)] = data['caption']
 
     def get_valid_tsv(self):
         if self.is_train:
@@ -181,10 +177,7 @@ class VisionLanguageTSVDataset(object):
         caption, tag, start, end = '', ' ', None, None
         data_sample = data[cap_idx]
         if self.is_train:
-            if 'action' in data_sample.keys() and 'justification' in data_sample.keys():
-                caption = data_sample['action'] + ' ' + data_sample['justification']
-            else:
-                caption = data_sample['caption']
+            caption = data_sample['caption']
             if 'start' in data_sample.keys():
                 start = data_sample['start']
             if 'end' in data_sample.keys():
