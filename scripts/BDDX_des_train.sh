@@ -1,12 +1,12 @@
 CUDA_VISIBLE_DEVICES=2,3 \
 OMPI_COMM_WORLD_SIZE="2" \
-python -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 --node_rank=0 --master_port=12348 src/tasks/run_caption_VidSwinBert.py \
+python -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 --node_rank=0 --master_port=25678 src/tasks/run_caption_VidSwinBert.py \
         --config src/configs/VidSwinBert/BDDX_8frm_default.json \
         --train_yaml BDDX_des/training_32frames.yaml \
         --val_yaml BDDX_des/testing_32frames.yaml \
         --per_gpu_train_batch_size 6 \
         --per_gpu_eval_batch_size 16 \
-        --num_train_epochs 10 \
+        --num_train_epochs 40 \
         --learning_rate 0.0003 \
         --max_num_frames 32 \
         --pretrained_2d 0 \
