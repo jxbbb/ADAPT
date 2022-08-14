@@ -86,6 +86,7 @@ class VisionLanguageTSVDataset(object):
         self.decoder_safeguard_duration = False
         self.add_od_labels = getattr(args, 'add_od_labels', False)
         self.use_asr = getattr(args, 'use_asr', False)
+        self.use_sep_cap = getattr(args, 'use_sep_cap', False)
 
         LOGGER.info(f'Use_asr: {self.use_asr}')
         # use uniform sampling as default for now
@@ -177,7 +178,10 @@ class VisionLanguageTSVDataset(object):
         caption, tag, start, end = '', ' ', None, None
         data_sample = data[cap_idx]
         if self.is_train:
-            caption = data_sample['caption']
+            if self.use_sep_cap:
+                caption = (data_sample['action'], data_sample['justification'])
+            else:
+                caption = data_sample['caption']
             if 'start' in data_sample.keys():
                 start = data_sample['start']
             if 'end' in data_sample.keys():
@@ -186,6 +190,8 @@ class VisionLanguageTSVDataset(object):
                 asr = data_sample['asr'].lower()
                 tag = asr
         else:
+            if self.use_sep_cap:
+                caption = ('','')
             if 'start' in data_sample.keys():
                 start = data_sample['start']
             if 'end' in data_sample.keys():
@@ -343,8 +349,11 @@ class VisionLanguageTSVDataset(object):
         else:
             caption = caption_sample
             caption_sample = None
+
         if self.args.add_od_labels==True:
             example = self.tensorizer.tensorize_example_e2e(caption, preproc_frames, text_b=tag, text_meta=caption_sample)
+        elif self.args.use_sep_cap==True:
+            example = self.tensorizer.tensorize_example_e2e(caption[0], preproc_frames, text_b=caption[1], text_meta=caption_sample)
         else:
             example = self.tensorizer.tensorize_example_e2e(caption, preproc_frames, text_meta=caption_sample)
 

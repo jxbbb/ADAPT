@@ -86,6 +86,7 @@ def make_data_loader(args, yaml_file, tokenizer, is_distributed=True,
 
     dataset = build_dataset(args, yaml_file, tokenizer, is_train=is_train)
     a,b,c = dataset.__getitem__(100)
+    a,b,c = dataset.__getitem__(1100)
     if is_train==True:
         shuffle = True
         images_per_gpu = args.per_gpu_train_batch_size

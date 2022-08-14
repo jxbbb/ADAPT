@@ -1840,6 +1840,7 @@ class BertForImageCaptioning(BertPreTrainedModel):
             num_return_sequences=None,
             num_keep_best=1, is_decode=None,
             add_od_labels=False, od_labels_start_posid=None,
+            use_sep_cap=None,
             use_cbs=False, fsm=None, num_constraints=None,
             min_constraints_to_satisfy=None, use_hypo=False,
             decoding_constraint_flag=None, bad_ending_ids=None,
@@ -1864,6 +1865,8 @@ class BertForImageCaptioning(BertPreTrainedModel):
         else:
             b, num_fsm_states, f1, v = fsm.shape
             assert b==batch_size and v==vocab_size and f1==num_fsm_states
+
+        self.use_sep_cap=use_sep_cap
 
         self.add_od_labels = add_od_labels
         # avoid position_ids collision of caption and od labels
@@ -1944,6 +1947,7 @@ class BertForImageCaptioning(BertPreTrainedModel):
                     top_k,
                     top_p,
                     repetition_penalty,
+                    bos_token_id,
                     pad_token_id,
                     eos_token_ids,
                     effective_batch_size,
