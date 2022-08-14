@@ -666,7 +666,6 @@ def main(args):
         args.max_global_step =  args.max_iter// args.gradient_accumulation_steps
         args.global_iters_per_epoch = args.max_global_step // args.num_train_epochs
         args.save_steps = args.global_iters_per_epoch
-        # args.save_steps = 500
 
         args, vl_transformer, optimizer, scheduler = mixed_precision_init(args, vl_transformer)
         train(args, train_dataloader, val_dataloader, vl_transformer, tokenizer, training_saver, optimizer, scheduler)
