@@ -776,6 +776,7 @@ class PreTrainedModel(nn.Module):
         top_k,
         top_p,
         repetition_penalty,
+        bos_token_id,
         pad_token_id,
         eos_token_ids,
         batch_size,
@@ -796,6 +797,7 @@ class PreTrainedModel(nn.Module):
 
         past = None
 
+        generate_caption_num = 0
         while cur_len < max_length:
             model_inputs = self.prepare_inputs_for_generation(input_ids, past=past)
             outputs = self(**model_inputs)
@@ -811,7 +813,7 @@ class PreTrainedModel(nn.Module):
                     token_len = 2
                     next_token_idx = 1
 
-            assert outputs[0].shape[1] == token_len
+            assert outputs[0].shape[1] == token_len, f"{outputs[0].shape[1], {token_len}}"
             next_token_logits = outputs[0][:, next_token_idx, :]
 
             # if model has past, then set the past variable to speed up decoding
@@ -859,7 +861,22 @@ class PreTrainedModel(nn.Module):
 
             # stop when there is a </s> in each sentence, or if we exceed the maximul length
             if cur_unfinished.max() == 0:
-                break
+                if self.use_sep_cap and generate_caption_num == 0:
+                    half_pad_len = max_length//2 - input_ids.shape[1]
+                    if half_pad_len > 0:
+                        padding_ids = input_ids.new(batch_size, half_pad_len).fill_(pad_token_id)
+                        input_ids = torch.cat([input_ids, padding_ids], dim=1)
+                        cur_len += half_pad_len
+                    input_ids = torch.cat([input_ids, (bos_token_id * (1 - cur_unfinished)).unsqueeze(-1)], dim=-1)
+                    if torch._C._get_tracing_state():
+                        cur_unfinished = torch.ones(1, dtype=input_ids)
+                    else:
+                        cur_unfinished = input_ids.new(batch_size).fill_(1)
+                    cur_len += 1
+                    generate_caption_num += 1
+                    continue
+                else:
+                    break
 
         # add eos_token_ids to unfinished sentences
         if cur_len == max_length:

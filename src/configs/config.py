@@ -96,6 +96,8 @@ class SharedConfigs(object):
                             help="Confidence threshold to select od labels.")
         parser.add_argument("--use_asr", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Whether to add ASR/transcript as additional modality input")
+        parser.add_argument("--use_sep_cap", type=str_to_bool, nargs='?', const=True, default=False,
+                            help="Whether to use action and justification in the meanwhile")
         parser.add_argument("--unique_labels_on", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Use unique labels only.")
         parser.add_argument("--no_sort_by_conf", type=str_to_bool, nargs='?', const=True, default=False,
@@ -356,6 +358,8 @@ def basic_check_arguments(args):
             args.add_od_labels = True
         if args.add_od_labels:
             assert args.max_seq_length > args.max_seq_a_length
+        elif args.use_sep_cap:
+            assert args.max_seq_length == 2*args.max_seq_a_length
         else:
             assert args.max_seq_length == args.max_seq_a_length
     if hasattr(args, 'do_test') and args.do_test:

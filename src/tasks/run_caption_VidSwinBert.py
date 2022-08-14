@@ -385,6 +385,7 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                 if is_exist:
                     for k in img_keys:
                         yield k, exist_key2pred[k]
+                        # return k, exist_key2pred[k]
                     continue
                 batch = tuple(t.to(args.device) for t in batch)
                 inputs = {'is_decode': True,
@@ -399,7 +400,8 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                     # for adding od labels
                     'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
                     # hyperparameters of beam search
-                    'max_length': args.max_gen_length,
+                    'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
+                    'use_sep_cap': args.use_sep_cap,
                     'num_beams': args.num_beams,
                     "temperature": args.temperature,
                     "top_k": args.top_k,
@@ -434,9 +436,11 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                     if isinstance(img_key, torch.Tensor):
                         img_key = img_key.item()
                     yield img_key, json.dumps(res)
+                    # return img_key, json.dumps(res)
 
         logger.info(f"Inference model computing time: {(time_meter / (step+1))} seconds per batch")
 
+    # gen_rows()
     tsv_writer(gen_rows(), cache_file)
     if world_size > 1:
         dist.barrier()
@@ -662,7 +666,7 @@ def main(args):
         args.max_global_step =  args.max_iter// args.gradient_accumulation_steps
         args.global_iters_per_epoch = args.max_global_step // args.num_train_epochs
         args.save_steps = args.global_iters_per_epoch
-        args.save_steps = 500
+        # args.save_steps = 500
 
         args, vl_transformer, optimizer, scheduler = mixed_precision_init(args, vl_transformer)
         train(args, train_dataloader, val_dataloader, vl_transformer, tokenizer, training_saver, optimizer, scheduler)
