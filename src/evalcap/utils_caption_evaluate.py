@@ -105,6 +105,61 @@ def evaluate_on_coco_caption(res_file, label_file, outfile=None):
             json.dump(result, fp, indent=4)
     return result
 
+def two_cap_evaluate_on_coco_caption(res_file, label_file, outfile=None):
+    """
+    res_tsv: TSV file, each row is [image_key, json format list of captions].
+             Each caption is a dict, with fields "caption", "conf".
+             or JSON file of coco style
+    label_file: .pt file, contains dict of image key to ground truth labels.
+             or JSON file of coco style
+    """
+    res_files = [res_file.replace('BDDX', 'BDDX_des'), res_file.replace('BDDX', 'BDDX_exp')]
+    label_files = [label_file.replace('BDDX', 'BDDX_des'), label_file.replace('BDDX', 'BDDX_exp')]
+    out_files = [outfile.replace('BDDX', 'BDDX_des'), outfile.replace('BDDX', 'BDDX_exp')]
+
+    results = []
+    for cap_ord, (new_res_file, label_file, outfile) in enumerate(zip(res_files, label_files, out_files)):
+        if not outfile:
+            outfile = op.splitext(res_file)[0] + '.eval.json'
+
+        if res_file.endswith('.tsv'):
+            res_file_coco = op.splitext(new_res_file)[0] + '_coco_format.json'
+            convert_tsv_to_coco_format(res_file, res_file_coco, cap_col=cap_ord+1)
+        else:
+            res_file_coco = res_file
+
+        if label_file.endswith('.pt') or label_file.endswith('.pth'):
+            label_file_coco = op.splitext(label_file)[0] + '_coco_format.json'
+            if not op.isfile(label_file_coco):
+                cap_dict = torch.load(label_file)
+                for k in cap_dict:
+                    caps = json.loads(cap_dict[k])
+                    assert isinstance(caps, list)
+                    cap_dict[k] = caps
+                dump_labels_to_coco_format(cap_dict, label_file_coco)
+        else:
+            label_file_coco = label_file
+
+        coco = COCO(label_file_coco)
+        cocoRes = coco.loadRes(res_file_coco)
+        cocoEval = COCOEvalCap(coco, cocoRes, 'corpus')
+
+        # evaluate on a subset of images by setting
+        # cocoEval.params['image_id'] = cocoRes.getImgIds()
+        # please remove this line when evaluating the full validation set
+        cocoEval.params['image_id'] = cocoRes.getImgIds()
+
+        # evaluate results
+        # SPICE will take a few minutes the first time, but speeds up due to caching
+        cocoEval.evaluate()
+        result = cocoEval.eval
+        if not outfile:
+            print(result)
+        else:
+            with open(outfile, 'w') as fp:
+                json.dump(result, fp, indent=4)
+        results.append(result)
+    return results
 
 def convert_tsv_to_coco_format(res_tsv, outfile,
         sep='\t', key_col=0, cap_col=1):

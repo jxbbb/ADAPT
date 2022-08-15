@@ -1,6 +1,6 @@
-CUDA_VISIBLE_DEVICES=0 \
+CUDA_VISIBLE_DEVICES=7 \
 python -m pdb src/tasks/run_caption_VidSwinBert.py \
-        --config src/configs/VidSwinBert/BDDX_8frm_default.json \
+        --config src/configs/VidSwinBert/BDDX_two_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/validation_32frames.yaml \
         --per_gpu_train_batch_size 1 \
@@ -18,5 +18,5 @@ python -m pdb src/tasks/run_caption_VidSwinBert.py \
         --gradient_accumulation_steps 4 \
         --learn_mask_enabled \
         --loss_sparse_w 0.5 \
-        # --use_sep_cap \
-        --output_dir ./output_16frame_one
+        --use_sep_cap \
+        --output_dir ./output_32_two

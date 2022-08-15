@@ -19,7 +19,7 @@ from apex.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 from src.configs.config import (basic_check_arguments, shared_configs, restore_training_settings)
 from src.datasets.vl_dataloader import make_data_loader
-from src.evalcap.utils_caption_evaluate import evaluate_on_coco_caption
+from src.evalcap.utils_caption_evaluate import evaluate_on_coco_caption, two_cap_evaluate_on_coco_caption
 from src.utils.logger import LOGGER as logger
 from src.utils.logger import (TB_LOGGER, RunningMeter, add_log_to_file)
 from src.utils.load_save import TrainingRestorer, TrainingSaver
@@ -28,7 +28,7 @@ from src.utils.comm import (is_main_process,
 from src.utils.miscellaneous import (NoOp, mkdir, set_seed, str_to_bool,
                                     delete_tsv_files, concat_tsv_files)
 from src.utils.metric_logger import MetricLogger
-from src.utils.tsv_file_ops import tsv_writer, reorder_tsv_keys
+from src.utils.tsv_file_ops import tsv_writer, double_tsv_writer, reorder_tsv_keys
 from src.utils.deepspeed import get_deepspeed_config, fp32_to_fp16
 from src.modeling.video_captioning_e2e_vid_swin_bert import VideoTransformer
 from src.modeling.load_swin import get_swin_model, reload_pretrained_swin
@@ -279,19 +279,37 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                     if get_world_size() > 1:
                         dist.barrier()
                     if is_main_process():
-                        with open(evaluate_file, 'r') as f:
-                            res = json.load(f)
-                        val_log = {f'valid/{k}': v for k,v in res.items()}
-                        TB_LOGGER.log_scalar_dict(val_log)
-                        aml_run.log(name='CIDEr', value=float(res['CIDEr']))
-                        
-                        best_score = max(best_score, res['CIDEr'])
-                        res['epoch'] = epoch
-                        res['iteration'] = iteration
-                        res['best_CIDEr'] = best_score
-                        eval_log.append(res)
-                        with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
-                            json.dump(eval_log, f)
+                        if args.use_sep_cap:
+                            evaluate_files = [evaluate_file.replace('BDDX', 'BDDX_des'), evaluate_file.replace('BDDX', 'BDDX_exp')]
+                            caps_name = ['des', 'cap']
+                            for cap_ord, eval_file in enumerate(evaluate_files):
+                                with open(eval_file, 'r') as f:
+                                    res = json.load(f)
+                                val_log = {f'valid/{caps_name[cap_ord]}_{k}': v for k,v in res.items()}
+                                TB_LOGGER.log_scalar_dict(val_log)
+                                aml_run.log(name='CIDEr', value=float(res['CIDEr']))
+                                
+                                best_score = max(best_score, res['CIDEr'])
+                                res['epoch'] = epoch
+                                res['iteration'] = iteration
+                                res['best_CIDEr'] = best_score
+                                eval_log.append(res)
+                                with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
+                                    json.dump(eval_log, f)
+                        else:
+                            with open(evaluate_file, 'r') as f:
+                                res = json.load(f)
+                            val_log = {f'valid/{k}': v for k,v in res.items()}
+                            TB_LOGGER.log_scalar_dict(val_log)
+                            aml_run.log(name='CIDEr', value=float(res['CIDEr']))
+                            
+                            best_score = max(best_score, res['CIDEr'])
+                            res['epoch'] = epoch
+                            res['iteration'] = iteration
+                            res['best_CIDEr'] = best_score
+                            eval_log.append(res)
+                            with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
+                                json.dump(eval_log, f)
                     if get_world_size() > 1:
                         dist.barrier()                
 
@@ -341,7 +359,10 @@ def evaluate(args, val_dataloader, model, tokenizer, output_dir):
     if is_main_process():
         caption_file = val_dataloader.dataset.get_caption_file_in_coco_format()
         data = val_dataloader.dataset.yaml_file.split('/')[-2]
-        result = evaluate_on_coco_caption(predict_file, caption_file, outfile=evaluate_file)
+        if args.use_sep_cap:
+            result = two_cap_evaluate_on_coco_caption(predict_file, caption_file, outfile=evaluate_file)
+        else:
+            result = evaluate_on_coco_caption(predict_file, caption_file, outfile=evaluate_file)
         logger.info(f'evaluation result: {str(result)}')
         logger.info(f'evaluation result saved to {evaluate_file}')
     if get_world_size() > 1:
@@ -377,16 +398,18 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
         with torch.no_grad():
             for step, (img_keys, batch, meta_data) in tqdm(enumerate(test_dataloader)):
                 # torch.cuda.empty_cache()
-                is_exist = True
-                for k in img_keys:
-                    if k not in exist_key2pred:
-                        is_exist = False
-                        break
-                if is_exist:
-                    for k in img_keys:
-                        yield k, exist_key2pred[k]
-                        # return k, exist_key2pred[k]
-                    continue
+                # is_exist = True
+                # for k in img_keys:
+                #     if k not in exist_key2pred:
+                #         is_exist = False
+                #         break
+                # if is_exist:
+                #     for k in img_keys:
+                #         yield k, exist_key2pred[k]
+                #         # return k, exist_key2pred[k]
+                #     continue
+                if step > 4:
+                    break
                 batch = tuple(t.to(args.device) for t in batch)
                 inputs = {'is_decode': True,
                     'input_ids': batch[0], 'attention_mask': batch[1],
@@ -428,20 +451,38 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                 all_caps = outputs[0]  # batch_size * num_keep_best * max_len
                 all_confs = torch.exp(outputs[1])
 
-                for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
-                    res = []
-                    for cap, conf in zip(caps, confs):
-                        cap = tokenizer.decode(cap.tolist(), skip_special_tokens=True)
-                        res.append({'caption': cap, 'conf': conf.item()})
-                    if isinstance(img_key, torch.Tensor):
-                        img_key = img_key.item()
-                    yield img_key, json.dumps(res)
-                    # return img_key, json.dumps(res)
+                if not args.use_sep_cap:
+                    for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
+                        res = []
+                        for cap, conf in zip(caps, confs):
+                            cap = tokenizer.decode(cap.tolist(), skip_special_tokens=True)
+                            res.append({'caption': cap, 'conf': conf.item()})
+                        if isinstance(img_key, torch.Tensor):
+                            img_key = img_key.item()
+                        yield img_key, json.dumps(res)
+                        # return img_key, json.dumps(res)
+                else:
+                    for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
+                        action = []
+                        justificatoin = []
+                        sep_place = args.max_gen_length
+                        for cap, conf in zip(caps, confs):
+                            cap_1 = tokenizer.decode(cap.tolist()[:sep_place], skip_special_tokens=True)
+                            cap_2 = tokenizer.decode(cap.tolist()[sep_place:], skip_special_tokens=True)
+                            action.append({'caption': cap_1, 'conf': conf.item()})
+                            justificatoin.append({'caption': cap_2, 'conf': conf.item()})
+                        if isinstance(img_key, torch.Tensor):
+                            img_key = img_key.item()
+                        yield img_key, json.dumps(action), json.dumps(justificatoin)
+                        # return img_key, (json.dumps(action), json.dumps(justificatoin))
 
         logger.info(f"Inference model computing time: {(time_meter / (step+1))} seconds per batch")
 
-    # gen_rows()
-    tsv_writer(gen_rows(), cache_file)
+    # a = gen_rows()
+    if args.use_sep_cap:
+        double_tsv_writer(gen_rows(), cache_file)
+    else:
+        tsv_writer(gen_rows(), cache_file)
     if world_size > 1:
         dist.barrier()
     if world_size > 1 and is_main_process():
@@ -666,6 +707,7 @@ def main(args):
         args.max_global_step =  args.max_iter// args.gradient_accumulation_steps
         args.global_iters_per_epoch = args.max_global_step // args.num_train_epochs
         args.save_steps = args.global_iters_per_epoch
+        args.save_steps = 10
 
         args, vl_transformer, optimizer, scheduler = mixed_precision_init(args, vl_transformer)
         train(args, train_dataloader, val_dataloader, vl_transformer, tokenizer, training_saver, optimizer, scheduler)
