@@ -5,7 +5,7 @@
     "train_yaml": "BDDX/training_32frames.yaml",
     "val_yaml": "BDDX/validation_32frames.yaml",
     "do_lower_case": true,
-    "max_seq_a_length": 15,
+    "max_seq_a_length": 30,
     "max_seq_length": 30,
     "max_img_seq_length": 196,
     "img_res": 224,
