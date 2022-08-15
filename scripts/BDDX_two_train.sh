@@ -4,7 +4,7 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --config src/configs/VidSwinBert/BDDX_two_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/validation_32frames.yaml \
-        --per_gpu_train_batch_size 6 \
+        --per_gpu_train_batch_size 4 \
         --per_gpu_eval_batch_size 16 \
         --num_train_epochs 20 \
         --learning_rate 0.0003 \
@@ -20,4 +20,4 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --learn_mask_enabled \
         --loss_sparse_w 0.5 \
         --use_sep_cap \
-        --output_dir ./output_16frame_two
+        --output_dir ./output_32frame_two

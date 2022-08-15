@@ -281,7 +281,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                     if is_main_process():
                         if args.use_sep_cap:
                             evaluate_files = [evaluate_file.replace('BDDX', 'BDDX_des'), evaluate_file.replace('BDDX', 'BDDX_exp')]
-                            caps_name = ['des', 'cap']
+                            caps_name = ['des', 'exp']
                             for cap_ord, eval_file in enumerate(evaluate_files):
                                 with open(eval_file, 'r') as f:
                                     res = json.load(f)
@@ -408,8 +408,8 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                 #         yield k, exist_key2pred[k]
                 #         # return k, exist_key2pred[k]
                 #     continue
-                if step > 4:
-                    break
+                # if step > 4:
+                #     break
                 batch = tuple(t.to(args.device) for t in batch)
                 inputs = {'is_decode': True,
                     'input_ids': batch[0], 'attention_mask': batch[1],
@@ -707,7 +707,7 @@ def main(args):
         args.max_global_step =  args.max_iter// args.gradient_accumulation_steps
         args.global_iters_per_epoch = args.max_global_step // args.num_train_epochs
         args.save_steps = args.global_iters_per_epoch
-        args.save_steps = 10
+        # args.save_steps = 10
 
         args, vl_transformer, optimizer, scheduler = mixed_precision_init(args, vl_transformer)
         train(args, train_dataloader, val_dataloader, vl_transformer, tokenizer, training_saver, optimizer, scheduler)
