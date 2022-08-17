@@ -474,7 +474,7 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                         if isinstance(img_key, torch.Tensor):
                             img_key = img_key.item()
                         yield img_key, json.dumps(action), json.dumps(justificatoin)
-                        # return img_key, (json.dumps(action), json.dumps(justificatoin))
+                        # return img_key, json.dumps(action), json.dumps(justificatoin)
 
         logger.info(f"Inference model computing time: {(time_meter / (step+1))} seconds per batch")
 

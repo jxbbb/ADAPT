@@ -46,7 +46,7 @@ class CaptionTensorizer(object):
         self.random_mask_prob = 1
         self.use_sep_cap = use_sep_cap
         if is_train:
-            assert attn_mask_type in ('seq2seq', 'bidirectional', 'cap_s2s', 'cap_bidir', 'learn_vid_att')
+            assert attn_mask_type in ('seq2seq', 'bidirectional', 'cap_s2s', 'cap_bidir', 'learn_vid_att', 'learn_without_crossattn')
             assert text_mask_type in ('random', 'bert_attn', 'pos_tag', 'attn_on_the_fly')
             if self.text_mask_type == 'pos_tag':
                 self.tag_to_mask = tag_to_mask
@@ -57,7 +57,7 @@ class CaptionTensorizer(object):
             if self.text_mask_type != "random":
                 self.random_mask_prob = random_mask_prob
         else:
-            assert attn_mask_type in ('seq2seq', 'learn_vid_att')
+            assert attn_mask_type in ('seq2seq', 'learn_vid_att', 'learn_without_crossattn')
         
         self._triangle_mask = torch.tril(torch.ones((self.max_seq_len, 
             self.max_seq_len), dtype=torch.long))
@@ -168,7 +168,7 @@ class CaptionTensorizer(object):
                     self._triangle_mask[0 : seq_b_len, 0 : seq_b_len]
             )
 
-            # full attention for C_b-C_a, C-R
+            # full attention for C_b-C_a
             attention_mask[l_start : l_end, c_start : c_end] = 1
 
             # full attention for C_a-R, C_b-R
@@ -177,6 +177,28 @@ class CaptionTensorizer(object):
 
             # full attention for video tokens:
             attention_mask[r_start : r_end, r_start : r_end] = 1
+        elif self.attn_mask_type in ('learn_without_crossattn'):
+            # prepare attention mask:
+            # note that there is no attention from caption to image
+            # because otherwise it will violate the triangle attention 
+            # for caption as caption will have full attention on image. 
+            attention_mask = torch.zeros((max_len, max_len), dtype=torch.long)
+            # triangle mask for caption_a to caption_a
+            attention_mask[c_start : c_end, c_start : c_end].copy_(
+                    self._triangle_mask[0 : seq_a_len, 0 : seq_a_len]
+            )
+
+            # triangle mask for caption_b to caption_b
+            attention_mask[l_start : l_end, l_start : l_end].copy_(
+                    self._triangle_mask[0 : seq_b_len, 0 : seq_b_len]
+            )
+
+            # full attention for C_a-R, C_b-R
+            attention_mask[c_start : c_end, r_start : r_end] = 1
+            attention_mask[l_start : l_end, r_start : r_end] = 1
+
+            # full attention for video tokens:
+            attention_mask[r_start : r_end, r_start : r_end] = 1        
         else:
             # prepare attention mask:
             # note that there is no attention from caption to image

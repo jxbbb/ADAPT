@@ -109,7 +109,7 @@ class SharedConfigs(object):
         parser.add_argument("--max_masked_tokens", type=int, default=3,
                             help="The max number of masked tokens per sentence.")
         parser.add_argument("--attn_mask_type", type=str, default='seq2seq',
-                           choices=['seq2seq', 'bidirectional', 'learn_vid_mask'], 
+                           choices=['seq2seq', 'bidirectional', 'learn_vid_mask', 'learn_without_crossattn'], 
                             help="Attention mask type, support seq2seq, bidirectional")
         parser.add_argument("--text_mask_type", type=str, default='random',
                            choices=['random', 'pos_tag', 'bert_attn', 'attn_on_the_fly'], 
