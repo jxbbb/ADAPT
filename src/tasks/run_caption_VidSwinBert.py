@@ -124,7 +124,10 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
 
     eval_log = []
     best_score = 0
-    best_B4 = 0
+
+    best_score_exp = 0
+    best_B4_exp = 0
+
     start_training_time = time.time()
     end = time.time()
     log_start = time.time()
@@ -289,18 +292,19 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                                 TB_LOGGER.log_scalar_dict(val_log)
                                 aml_run.log(name='CIDEr', value=float(res['CIDEr']))
                                 
-                                if res['CIDEr'] > best_score or res['Bleu_4'] > best_B4 :
+                                if cap_ord == 1 and res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp :
                                     training_saver.save_model(
                                         checkpoint_dir, global_step, model, optimizer)
 
-                                best_score = max(best_score, res['CIDEr'])
-                                best_B4 = max(best_B4, res['Bleu_4'])
-                                res['epoch'] = epoch
-                                res['iteration'] = iteration
-                                res['best_CIDEr'] = best_score
-                                eval_log.append(res)
-                                with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
-                                    json.dump(eval_log, f)
+                                if cap_ord == 1:
+                                    best_score_exp = max(best_score_exp, res['CIDEr'])
+                                    best_B4_exp = max(best_B4_exp, res['Bleu_4'])
+                                    res['epoch'] = epoch
+                                    res['iteration'] = iteration
+                                    res['best_CIDEr_exp'] = best_score_exp
+                                    eval_log.append(res)
+                                    with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
+                                        json.dump(eval_log, f)
                         else:
                             with open(evaluate_file, 'r') as f:
                                 res = json.load(f)
