@@ -124,6 +124,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
 
     eval_log = []
     best_score = 0
+    best_B4 = 0
     start_training_time = time.time()
     end = time.time()
     log_start = time.time()
@@ -269,8 +270,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                     epoch, global_step))
                 if get_world_size() > 1:
                     dist.barrier()
-                training_saver.save_model(
-                    checkpoint_dir, global_step, model, optimizer)
+
                 if get_world_size() > 1:
                     dist.barrier()    
                 if args.evaluate_during_training:
@@ -289,7 +289,12 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                                 TB_LOGGER.log_scalar_dict(val_log)
                                 aml_run.log(name='CIDEr', value=float(res['CIDEr']))
                                 
+                                if res['CIDEr'] > best_score or res['Bleu_4'] > best_B4 :
+                                    training_saver.save_model(
+                                        checkpoint_dir, global_step, model, optimizer)
+
                                 best_score = max(best_score, res['CIDEr'])
+                                best_B4 = max(best_B4, res['Bleu_4'])
                                 res['epoch'] = epoch
                                 res['iteration'] = iteration
                                 res['best_CIDEr'] = best_score
@@ -511,7 +516,7 @@ def check_arguments(args):
         logger.info("No pretrained_checkpoint to be loaded, disable --reload_pretrained_swin")
         args.reload_pretrained_swin = False
 
-    if args.learn_mask_enabled==True: 
+    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn': 
         args.attn_mask_type = 'learn_vid_att'
 
 def update_existing_config_for_inference(args):
