@@ -127,6 +127,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
 
     best_score_exp = 0
     best_B4_exp = 0
+    best_score_des_add_exp = 0
 
     start_training_time = time.time()
     end = time.time()
@@ -285,20 +286,24 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                         if args.use_sep_cap:
                             evaluate_files = [evaluate_file.replace('BDDX', 'BDDX_des'), evaluate_file.replace('BDDX', 'BDDX_exp')]
                             caps_name = ['des', 'exp']
+                            score_des_add_exp = 0
                             for cap_ord, eval_file in enumerate(evaluate_files):
                                 with open(eval_file, 'r') as f:
                                     res = json.load(f)
                                 val_log = {f'valid/{caps_name[cap_ord]}_{k}': v for k,v in res.items()}
                                 TB_LOGGER.log_scalar_dict(val_log)
                                 aml_run.log(name='CIDEr', value=float(res['CIDEr']))
-                                
-                                if cap_ord == 1 and res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp :
+
+                                score_des_add_exp += res['CIDEr']
+
+                                if cap_ord == 1 and res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp:
                                     training_saver.save_model(
                                         checkpoint_dir, global_step, model, optimizer)
 
                                 if cap_ord == 1:
                                     best_score_exp = max(best_score_exp, res['CIDEr'])
                                     best_B4_exp = max(best_B4_exp, res['Bleu_4'])
+                                    best_score_des_add_exp = max(best_score_des_add_exp, score_des_add_exp)
                                     res['epoch'] = epoch
                                     res['iteration'] = iteration
                                     res['best_CIDEr_exp'] = best_score_exp
