@@ -296,7 +296,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
 
                                 score_des_add_exp += res['CIDEr']
 
-                                if cap_ord == 1 and res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp:
+                                if cap_ord == 1 and (res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp):
                                     training_saver.save_model(
                                         checkpoint_dir, global_step, model, optimizer)
 
