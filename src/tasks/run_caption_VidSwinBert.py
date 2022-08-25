@@ -525,7 +525,7 @@ def check_arguments(args):
         logger.info("No pretrained_checkpoint to be loaded, disable --reload_pretrained_swin")
         args.reload_pretrained_swin = False
 
-    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn': 
+    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn' and args.attn_mask_type != 'learn_with_swap_crossattn': 
         args.attn_mask_type = 'learn_vid_att'
 
 def update_existing_config_for_inference(args):

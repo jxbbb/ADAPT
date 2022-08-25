@@ -16,7 +16,7 @@ python -m pdb src/tasks/run_caption_VidSwinBert.py \
         --mixed_precision_method deepspeed \
         --deepspeed_fp16 \
         --gradient_accumulation_steps 4 \
-        --attn_mask_type learn_without_crossattn\
+        --attn_mask_type learn_with_swap_crossattn\
         --loss_sparse_w 0.5 \
         --use_sep_cap \
         --output_dir ./output_test
