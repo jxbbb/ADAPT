@@ -124,6 +124,11 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
 
     eval_log = []
     best_score = 0
+
+    best_score_exp = 0
+    best_B4_exp = 0
+    best_score_des_add_exp = 0
+
     start_training_time = time.time()
     end = time.time()
     log_start = time.time()
@@ -269,8 +274,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                     epoch, global_step))
                 if get_world_size() > 1:
                     dist.barrier()
-                training_saver.save_model(
-                    checkpoint_dir, global_step, model, optimizer)
+
                 if get_world_size() > 1:
                     dist.barrier()    
                 if args.evaluate_during_training:
@@ -282,20 +286,33 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                         if args.use_sep_cap:
                             evaluate_files = [evaluate_file.replace('BDDX', 'BDDX_des'), evaluate_file.replace('BDDX', 'BDDX_exp')]
                             caps_name = ['des', 'exp']
+                            score_des_add_exp = 0
                             for cap_ord, eval_file in enumerate(evaluate_files):
                                 with open(eval_file, 'r') as f:
                                     res = json.load(f)
                                 val_log = {f'valid/{caps_name[cap_ord]}_{k}': v for k,v in res.items()}
                                 TB_LOGGER.log_scalar_dict(val_log)
                                 aml_run.log(name='CIDEr', value=float(res['CIDEr']))
-                                
-                                best_score = max(best_score, res['CIDEr'])
-                                res['epoch'] = epoch
-                                res['iteration'] = iteration
-                                res['best_CIDEr'] = best_score
-                                eval_log.append(res)
-                                with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
-                                    json.dump(eval_log, f)
+
+                                score_des_add_exp += res['CIDEr']
+
+                                if cap_ord == 1 and (res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp):
+                                    print(f"best B4:{best_B4_exp}\tbest exp cider:{best_score_exp}\tbest cider sum:{score_des_add_exp}")
+                                    training_saver.save_model(
+                                        checkpoint_dir, global_step, model, optimizer)
+
+                                if cap_ord == 1:
+                                    best_score_exp = max(best_score_exp, res['CIDEr'])
+                                    best_B4_exp = max(best_B4_exp, res['Bleu_4'])
+                                    best_score_des_add_exp = max(best_score_des_add_exp, score_des_add_exp)
+                                    res['epoch'] = epoch
+                                    res['iteration'] = iteration
+                                    res['best_B4_exp'] = best_B4_exp
+                                    res['best_CIDEr_exp'] = best_score_exp
+                                    res['best_CIDEr_sum'] = score_des_add_exp
+                                    eval_log.append(res)
+                                    with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
+                                        json.dump(eval_log, f)
                         else:
                             with open(evaluate_file, 'r') as f:
                                 res = json.load(f)
@@ -511,7 +528,7 @@ def check_arguments(args):
         logger.info("No pretrained_checkpoint to be loaded, disable --reload_pretrained_swin")
         args.reload_pretrained_swin = False
 
-    if args.learn_mask_enabled==True: 
+    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn' and args.attn_mask_type != 'learn_with_swap_crossattn': 
         args.attn_mask_type = 'learn_vid_att'
 
 def update_existing_config_for_inference(args):
