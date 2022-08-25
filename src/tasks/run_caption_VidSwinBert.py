@@ -297,6 +297,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                                 score_des_add_exp += res['CIDEr']
 
                                 if cap_ord == 1 and (res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp):
+                                    print(f"best B4:{best_B4_exp}\tbest exp cider:{best_score_exp}\tbest cider sum:{score_des_add_exp}")
                                     training_saver.save_model(
                                         checkpoint_dir, global_step, model, optimizer)
 
@@ -306,7 +307,9 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                                     best_score_des_add_exp = max(best_score_des_add_exp, score_des_add_exp)
                                     res['epoch'] = epoch
                                     res['iteration'] = iteration
+                                    res['best_B4_exp'] = best_B4_exp
                                     res['best_CIDEr_exp'] = best_score_exp
+                                    res['best_CIDEr_sum'] = score_des_add_exp
                                     eval_log.append(res)
                                     with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
                                         json.dump(eval_log, f)
