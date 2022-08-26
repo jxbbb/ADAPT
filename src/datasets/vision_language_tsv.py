@@ -87,6 +87,7 @@ class VisionLanguageTSVDataset(object):
         self.add_od_labels = getattr(args, 'add_od_labels', False)
         self.use_asr = getattr(args, 'use_asr', False)
         self.use_sep_cap = getattr(args, 'use_sep_cap', False)
+        self.use_swap_cap = getattr(args, 'use_swap_cap', False)
 
         LOGGER.info(f'Use_asr: {self.use_asr}')
         # use uniform sampling as default for now
@@ -180,6 +181,8 @@ class VisionLanguageTSVDataset(object):
         if self.is_train:
             if self.use_sep_cap:
                 caption = (data_sample['action'], data_sample['justification'])
+                if self.use_swap_cap:
+                    caption = (data_sample['justification'], data_sample['action'])
             else:
                 caption = data_sample['caption']
             if 'start' in data_sample.keys():

@@ -98,6 +98,8 @@ class SharedConfigs(object):
                             help="Whether to add ASR/transcript as additional modality input")
         parser.add_argument("--use_sep_cap", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Whether to use action and justification in the meanwhile")
+        parser.add_argument("--use_swap_cap", type=str_to_bool, nargs='?', const=True, default=False,
+                            help="swap action and justification place, should use with --use_sep_cap")
         parser.add_argument("--unique_labels_on", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Use unique labels only.")
         parser.add_argument("--no_sort_by_conf", type=str_to_bool, nargs='?', const=True, default=False,
@@ -109,7 +111,7 @@ class SharedConfigs(object):
         parser.add_argument("--max_masked_tokens", type=int, default=3,
                             help="The max number of masked tokens per sentence.")
         parser.add_argument("--attn_mask_type", type=str, default='seq2seq',
-                           choices=['seq2seq', 'bidirectional', 'learn_vid_mask', 'learn_without_crossattn'], 
+                           choices=['seq2seq', 'bidirectional', 'learn_vid_mask', 'learn_without_crossattn', 'learn_with_swap_crossattn'], 
                             help="Attention mask type, support seq2seq, bidirectional")
         parser.add_argument("--text_mask_type", type=str, default='random',
                            choices=['random', 'pos_tag', 'bert_attn', 'attn_on_the_fly'], 
@@ -362,6 +364,8 @@ def basic_check_arguments(args):
             assert args.max_seq_length == 2*args.max_seq_a_length
         else:
             assert args.max_seq_length == args.max_seq_a_length
+        if args.use_swap_cap:
+            assert args.use_sep_cap
     if hasattr(args, 'do_test') and args.do_test:
         for test_yaml in args.test_yaml:
             check_yaml_file(op.join(args.data_dir, test_yaml))

@@ -266,8 +266,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                 log_start = time.time()
 
 
-            if (args.save_steps > 0 and global_step % args.save_steps == 0) or global_step == max_global_step or global_step == 1:
-            # if (args.save_steps > 0 and global_step % 1 == 0) or global_step == max_global_step or global_step == 1:
+            if (args.save_steps > 0 and global_step % 1 == 0) or global_step == max_global_step or global_step == 1:
                 epoch = global_step // global_iters_per_epoch
                 
                 checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
@@ -480,18 +479,21 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                         # return img_key, json.dumps(res)
                 else:
                     for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
-                        action = []
-                        justificatoin = []
+                        all_cap_a = []
+                        all_cap_b = []
                         sep_place = args.max_gen_length
                         for cap, conf in zip(caps, confs):
                             cap_1 = tokenizer.decode(cap.tolist()[:sep_place], skip_special_tokens=True)
                             cap_2 = tokenizer.decode(cap.tolist()[sep_place:], skip_special_tokens=True)
-                            action.append({'caption': cap_1, 'conf': conf.item()})
-                            justificatoin.append({'caption': cap_2, 'conf': conf.item()})
+                            all_cap_a.append({'caption': cap_1, 'conf': conf.item()})
+                            all_cap_b.append({'caption': cap_2, 'conf': conf.item()})
                         if isinstance(img_key, torch.Tensor):
                             img_key = img_key.item()
-                        yield img_key, json.dumps(action), json.dumps(justificatoin)
-                        # return img_key, json.dumps(action), json.dumps(justificatoin)
+                        if args.use_swap_cap:
+                            yield img_key, json.dumps(all_cap_b), json.dumps(all_cap_a)
+                        else:
+                            yield img_key, json.dumps(all_cap_a), json.dumps(all_cap_b)
+                        # return img_key, json.dumps(all_cap_a), json.dumps(all_cap_b)
 
         logger.info(f"Inference model computing time: {(time_meter / (step+1))} seconds per batch")
 
@@ -528,7 +530,7 @@ def check_arguments(args):
         logger.info("No pretrained_checkpoint to be loaded, disable --reload_pretrained_swin")
         args.reload_pretrained_swin = False
 
-    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn': 
+    if args.learn_mask_enabled==True and args.attn_mask_type != 'learn_without_crossattn' and args.attn_mask_type != 'learn_with_swap_crossattn': 
         args.attn_mask_type = 'learn_vid_att'
 
 def update_existing_config_for_inference(args):

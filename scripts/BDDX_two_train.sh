@@ -18,6 +18,6 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --deepspeed_fp16 \
         --gradient_accumulation_steps 4 \
         --learn_mask_enabled \
-        --loss_sparse_w 0.6 \
+        --loss_sparse_w 0.5 \
         --use_sep_cap \
-        --output_dir ./expr/32frame/two/40_0.0002_0.06_0.6
+        --output_dir ./expr/32frame/two/40_0.0003_0.05_0.5
