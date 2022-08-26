@@ -7,10 +7,10 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --per_gpu_train_batch_size 4 \
         --per_gpu_eval_batch_size 16 \
         --num_train_epochs 40 \
-        --learning_rate 0.0003 \
+        --learning_rate 0.0002 \
         --max_num_frames 32 \
         --pretrained_2d 0 \
-        --backbone_coef_lr 0.05 \
+        --backbone_coef_lr 0.06 \
         --mask_prob 0.5 \
         --max_masked_token 45 \
         --zero_opt_stage 1 \
