@@ -28,13 +28,20 @@ from src.utils.miscellaneous import (mkdir, set_seed, str_to_bool)
 from src.modeling.video_captioning_e2e_vid_swin_bert import VideoTransformer
 from src.modeling.load_swin import get_swin_model, reload_pretrained_swin
 from src.modeling.load_bert import get_bert_model
+from PIL import Image
+import numpy as np
+import pyttsx
 
 def _online_video_decode(args, video_path):
     decoder_num_frames = getattr(args, 'max_num_frames', 2)
     frames, _ = extract_frames_from_video_path(
                 video_path, target_fps=3, num_frames=decoder_num_frames,
                 multi_thread_decode=False, sampling_strategy="uniform",
-                safeguard_duration=False, start=None, end=None)
+                safeguard_duration=False, start=35, end=40)
+
+    for i in range(frames.shape[0]):
+        frame = frames[i]
+        Image.fromarray(np.array(frame.permute(1,2,0))).save(f"demo/{i}.png")
     return frames
 
 def _transforms(args, frames):
@@ -69,7 +76,7 @@ def inference(args, video_path, model, tokenizer, tensorizer):
     model.eval()
     frames = _online_video_decode(args, video_path)
     preproc_frames = _transforms(args, frames)
-    data_sample = tensorizer.tensorize_example_e2e('', preproc_frames)
+    data_sample = tensorizer.tensorize_example_e2e('', preproc_frames, text_b='')
     data_sample = tuple(t.to(args.device) for t in data_sample)
     with torch.no_grad():
 
@@ -85,7 +92,8 @@ def inference(args, video_path, model, tokenizer, tensorizer):
             # for adding od labels
             'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
             # hyperparameters of beam search
-            'max_length': args.max_gen_length,
+            'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
+            'use_sep_cap': args.use_sep_cap,
             'num_beams': args.num_beams,
             "temperature": args.temperature,
             "top_k": args.top_k,

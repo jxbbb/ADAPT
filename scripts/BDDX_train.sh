@@ -1,5 +1,5 @@
 CUDA_VISIBLE_DEVICES=0 \
-python src/tasks/run_caption_VidSwinBert.py \
+python -m pdb src/tasks/run_caption_VidSwinBert.py \
         --config src/configs/VidSwinBert/BDDX_two_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/testing_32frames.yaml \
