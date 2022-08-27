@@ -31,6 +31,7 @@ from src.utils.metric_logger import MetricLogger
 from src.utils.tsv_file_ops import tsv_writer, double_tsv_writer, reorder_tsv_keys
 from src.utils.deepspeed import get_deepspeed_config, fp32_to_fp16
 from src.modeling.video_captioning_e2e_vid_swin_bert import VideoTransformer
+from src.modeling.multitask_e2e_vid_swin_bert import MultitaskVideoTransformer
 from src.modeling.load_swin import get_swin_model, reload_pretrained_swin
 from src.modeling.load_bert import get_bert_model
 from src.solver import AdamW, WarmupLinearLR
@@ -157,7 +158,8 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
         inputs = {
             'input_ids': batch[0], 'attention_mask': batch[1],
             'token_type_ids': batch[2], 'img_feats': batch[3],
-            'masked_pos': batch[4], 'masked_ids': batch[5]
+            'masked_pos': batch[4], 'masked_ids': batch[5],
+            'car_info': batch[6],
         }
 
         if iteration == 1:
@@ -431,6 +433,7 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
                     'input_ids': batch[0], 'attention_mask': batch[1],
                     'token_type_ids': batch[2], 'img_feats': batch[3],
                     'masked_pos': batch[4],
+                    'car_info': batch[5],
                     'do_sample': False,
                     'bos_token_id': cls_token_id,
                     'pad_token_id': pad_token_id,
@@ -630,7 +633,10 @@ def main(args):
     # Get BERT and tokenizer 
     bert_model, config, tokenizer = get_bert_model(args)
     # build SwinBERT based on training configs
-    vl_transformer = VideoTransformer(args, config, swin_model, bert_model) 
+    if not args.use_car_tensor:
+        vl_transformer = VideoTransformer(args, config, swin_model, bert_model)
+    else:
+        vl_transformer = MultitaskVideoTransformer(args, config, swin_model, bert_model)
     vl_transformer.freeze_backbone(freeze=args.freeze_backbone)
 
     if args.do_eval:

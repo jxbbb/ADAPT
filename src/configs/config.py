@@ -100,6 +100,8 @@ class SharedConfigs(object):
                             help="Whether to use action and justification in the meanwhile")
         parser.add_argument("--use_swap_cap", type=str_to_bool, nargs='?', const=True, default=False,
                             help="swap action and justification place, should use with --use_sep_cap")
+        parser.add_argument("--use_car_tensor", type=str_to_bool, nargs='?', const=True, default=False,
+                            help="use car tensor to do multitask")
         parser.add_argument("--unique_labels_on", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Use unique labels only.")
         parser.add_argument("--no_sort_by_conf", type=str_to_bool, nargs='?', const=True, default=False,

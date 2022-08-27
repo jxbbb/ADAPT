@@ -20,7 +20,7 @@ from .data_utils.image_ops import img_from_base64
 from .data_utils.video_ops import extract_frames_from_video_binary, extract_frames_from_video_path
 from src.utils.logger import LOGGER
 import base64
-
+import h5py
 # video_transforms & volume_transforms from https://github.com/hassony2/torch_videovision
 from .data_utils.video_transforms import Compose, Resize, RandomCrop, ColorJitter, Normalize, CenterCrop, RandomHorizontalFlip, RandomResizedCrop
 from .data_utils.volume_transforms import ClipToTensor
@@ -88,6 +88,8 @@ class VisionLanguageTSVDataset(object):
         self.use_asr = getattr(args, 'use_asr', False)
         self.use_sep_cap = getattr(args, 'use_sep_cap', False)
         self.use_swap_cap = getattr(args, 'use_swap_cap', False)
+
+        self.use_car_tensor = getattr(args, 'use_car_tensor', False)
 
         LOGGER.info(f'Use_asr: {self.use_asr}')
         # use uniform sampling as default for now
@@ -328,6 +330,23 @@ class VisionLanguageTSVDataset(object):
         else: 
             return self.get_image(row[-1]), False
 
+    def get_car_info(self, img_key):
+        if self.is_train:
+            info_path = op.join(self.root, "processed_video_info", img_key+".h5")
+            all_infos = h5py.File(info_path)
+
+            info_meta_data = torch.zeros((2, self.decoder_num_frames))
+            for key in all_infos.keys():
+                assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
+            info_meta_data = torch.stack([torch.tensor(all_infos['curvature'], dtype=torch.float32), 
+                                        torch.tensor(all_infos['speed'], dtype=torch.float32), 
+                                        # torch.tensor(all_infos['accelerator'])
+                                        ], dim=0,)
+            assert info_meta_data.shape == (2, self.decoder_num_frames)
+            return info_meta_data
+        else:
+            return torch.zeros((2, self.decoder_num_frames))
+
     def __len__(self):
         return len(self.img_line_list)
 
@@ -336,7 +355,10 @@ class VisionLanguageTSVDataset(object):
             idx = idx % self.args.effective_batch_size
         img_idx, cap_idx = self.get_image_cap_index(idx)
         img_key = self.image_keys[img_idx]
-        caption_sample, tag, start, end = self.get_caption_and_timeinfo_wrapper(img_idx, cap_idx)  
+        caption_sample, tag, start, end = self.get_caption_and_timeinfo_wrapper(img_idx, cap_idx)
+        car_infos = 0
+        if self.use_car_tensor:
+            car_infos = self.get_car_info(img_key)
         # get image or video frames
         # frames: (T, C, H, W),  is_video: binary tag
         raw_frames, is_video = self.get_visual_data(img_idx, start, end) 
@@ -366,6 +388,7 @@ class VisionLanguageTSVDataset(object):
         meta_data['img_key'] = img_key
         meta_data['is_video'] = is_video # True: video data, False: image data
         meta_data['tag'] = tag
+        example =  example + (car_infos,)
 
         return img_key, example, meta_data
 
