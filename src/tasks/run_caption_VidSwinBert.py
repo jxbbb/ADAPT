@@ -268,7 +268,7 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                 log_start = time.time()
 
 
-            if (args.save_steps > 0 and global_step % 1 == 0) or global_step == max_global_step or global_step == 1:
+            if (args.save_steps > 0 and global_step % args.save_steps == 0) or global_step == max_global_step or global_step == 1:
                 epoch = global_step // global_iters_per_epoch
                 
                 checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
