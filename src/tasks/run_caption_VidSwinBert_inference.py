@@ -30,14 +30,14 @@ from src.modeling.load_swin import get_swin_model, reload_pretrained_swin
 from src.modeling.load_bert import get_bert_model
 from PIL import Image
 import numpy as np
-import pyttsx
+# import pyttsx3
 
 def _online_video_decode(args, video_path):
     decoder_num_frames = getattr(args, 'max_num_frames', 2)
     frames, _ = extract_frames_from_video_path(
                 video_path, target_fps=3, num_frames=decoder_num_frames,
                 multi_thread_decode=False, sampling_strategy="uniform",
-                safeguard_duration=False, start=35, end=40)
+                safeguard_duration=False, start=0, end=5)
 
     for i in range(frames.shape[0]):
         frame = frames[i]
@@ -161,6 +161,7 @@ def update_existing_config_for_inference(args):
     train_args.do_test = True
     train_args.val_yaml = args.val_yaml
     train_args.test_video_fname = args.test_video_fname
+    train_args.use_car_tensor = True if hasattr(args, 'use_car_tensor') and args.use_car_tensor else False
     return train_args
 
 def get_custom_args(base_config):

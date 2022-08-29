@@ -40,6 +40,8 @@ tmp*.py
 linjli
 ./datasets
 /datasets
+./datasets_part
+/datasets_part
 /models
 *.zip
 ./models

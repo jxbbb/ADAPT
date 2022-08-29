@@ -331,21 +331,18 @@ class VisionLanguageTSVDataset(object):
             return self.get_image(row[-1]), False
 
     def get_car_info(self, img_key):
-        if self.is_train:
-            info_path = op.join(self.root, "processed_video_info", img_key+".h5")
-            all_infos = h5py.File(info_path)
+        info_path = op.join(self.root, "processed_video_info", img_key+".h5")
+        all_infos = h5py.File(info_path)
 
-            info_meta_data = torch.zeros((2, self.decoder_num_frames))
-            for key in all_infos.keys():
-                assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
-            info_meta_data = torch.stack([torch.tensor(all_infos['curvature'], dtype=torch.float32), 
-                                        torch.tensor(all_infos['speed'], dtype=torch.float32), 
-                                        # torch.tensor(all_infos['accelerator'])
-                                        ], dim=0,)
-            assert info_meta_data.shape == (2, self.decoder_num_frames)
-            return info_meta_data
-        else:
-            return torch.zeros((2, self.decoder_num_frames))
+        info_meta_data = torch.zeros((2, self.decoder_num_frames))
+        for key in all_infos.keys():
+            assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
+        info_meta_data = torch.stack([torch.tensor(all_infos['curvature'], dtype=torch.float32), 
+                                            torch.tensor(all_infos['speed'], dtype=torch.float32), 
+                                            # torch.tensor(all_infos['accelerator'])
+                                            ], dim=0,)
+        assert info_meta_data.shape == (2, self.decoder_num_frames)
+        return info_meta_data
 
     def __len__(self):
         return len(self.img_line_list)
