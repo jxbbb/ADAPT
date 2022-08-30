@@ -193,10 +193,11 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
             loss_dict = {'loss': loss, 'loss_sparsity': loss_sparsity.item(), 'acc': batch_acc}
         else:
             loss_dict = {'loss': loss, 'acc': batch_acc}
-        meters.update(**loss_dict)
+
         if args.multitask:
-            loss_dict = {'loss_sensor': loss_sensor}
-            meters.update(**loss_dict)
+            loss_dict['loss_sensor'] = loss_sensor
+        meters.update(**loss_dict)
+
         running_loss(loss.item())
         running_batch_acc(batch_acc.item())
         
@@ -213,6 +214,10 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
         if backward_now:
             global_step += 1
             TB_LOGGER.add_scalar('train/loss', running_loss.val, global_step)
+            if args.multitask:
+                TB_LOGGER.add_scalar('train/loss_sensor', loss_sensor.cpu(), global_step)
+            if args.learn_mask_enabled:
+                TB_LOGGER.add_scalar('train/loss_sparsity', loss_sparsity.cpu(), global_step)
 
             lr_VisBone = optimizer.param_groups[0]["lr"]
             lr_LM = optimizer.param_groups[1]["lr"]
