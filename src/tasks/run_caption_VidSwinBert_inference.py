@@ -161,7 +161,8 @@ def update_existing_config_for_inference(args):
     train_args.do_test = True
     train_args.val_yaml = args.val_yaml
     train_args.test_video_fname = args.test_video_fname
-    train_args.use_car_tensor = True if hasattr(args, 'use_car_tensor') and args.use_car_tensor else False
+    train_args.use_car_sensor = True if hasattr(args, 'use_car_sensor') and args.use_car_sensor else False
+    train_args.multitask = True if hasattr(args, 'multitask') and args.multitask else False
     return train_args
 
 def get_custom_args(base_config):
@@ -179,6 +180,7 @@ def get_custom_args(base_config):
     parser.add_argument("--reload_pretrained_swin", type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--learn_mask_enabled', type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--loss_sparse_w', type=float, default=0)
+    parser.add_argument('--loss_sensor_w', type=float, default=0)
     parser.add_argument('--sparse_mask_soft2hard', type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--transfer_method', type=int, default=-1,
                         help="0: load all SwinBERT pre-trained weights, 1: load only pre-trained sparse mask")

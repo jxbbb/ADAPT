@@ -89,7 +89,8 @@ class VisionLanguageTSVDataset(object):
         self.use_sep_cap = getattr(args, 'use_sep_cap', False)
         self.use_swap_cap = getattr(args, 'use_swap_cap', False)
 
-        self.use_car_tensor = getattr(args, 'use_car_tensor', False)
+        self.use_car_sensor = getattr(args, 'use_car_sensor', False)
+        self.multitask = getattr(args, 'multitask', False)
 
         LOGGER.info(f'Use_asr: {self.use_asr}')
         # use uniform sampling as default for now
@@ -354,7 +355,7 @@ class VisionLanguageTSVDataset(object):
         img_key = self.image_keys[img_idx]
         caption_sample, tag, start, end = self.get_caption_and_timeinfo_wrapper(img_idx, cap_idx)
         car_infos = 0
-        if self.use_car_tensor:
+        if self.use_car_sensor or self.multitask:
             car_infos = self.get_car_info(img_key)
         # get image or video frames
         # frames: (T, C, H, W),  is_video: binary tag

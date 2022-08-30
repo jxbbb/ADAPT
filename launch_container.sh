@@ -1,12 +1,14 @@
-DATA_DIR=$1
-MODEL_DIR=$2
-OUTPUT=$3
+export REPO_DIR=$PWD
+DATA_DIR=$REPO_DIR'/datasets_part/'
+MODEL_DIR=$REPO_DIR'/models/'
+OUTPUT=$REPO_DIR'/output/'
+
 
 if [ -z $CUDA_VISIBLE_DEVICES ]; then
     CUDA_VISIBLE_DEVICES='all'
 fi
 
-if [ "$4" = "--prepro" ]; then
+if [ "$1" = "--prepro" ]; then
     RO=""
 else
     RO=",readonly"

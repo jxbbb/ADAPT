@@ -425,7 +425,7 @@ def build_tensorizer(args, tokenizer, is_train=True):
             tag_to_mask = None
         return CaptionTensorizer(
             tokenizer,
-            max_img_seq_length=args.max_img_seq_length if not args.use_car_tensor else args.max_img_seq_length+2,
+            max_img_seq_length=args.max_img_seq_length if not args.use_car_sensor else args.max_img_seq_length+2,
             max_seq_length=args.max_seq_length,
             max_seq_a_length=args.max_seq_a_length,
             mask_prob=args.mask_prob,
@@ -442,7 +442,7 @@ def build_tensorizer(args, tokenizer, is_train=True):
         )
     return CaptionTensorizer(
             tokenizer,
-            max_img_seq_length=args.max_img_seq_length if not args.use_car_tensor else args.max_img_seq_length+2,
+            max_img_seq_length=args.max_img_seq_length if not args.use_car_sensor else args.max_img_seq_length+2,
             max_seq_length=args.max_seq_length if args.add_od_labels or args.use_sep_cap else args.max_gen_length,
             max_seq_a_length=args.max_gen_length,
             is_train=False,

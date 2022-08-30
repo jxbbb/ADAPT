@@ -177,6 +177,10 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
             outputs = model(**inputs)
         loss, logits = outputs[:2]
 
+        if args.multitask:
+            logits_sensor = outputs[-2]
+            loss_sensor = outputs[-3]
+            loss = loss + (loss_sensor * args.loss_sensor_w)
         if args.learn_mask_enabled:
             loss_sparsity = outputs[-1]
             loss = loss + (loss_sparsity * args.loss_sparse_w)
@@ -190,6 +194,9 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
         else:
             loss_dict = {'loss': loss, 'acc': batch_acc}
         meters.update(**loss_dict)
+        if args.multitask:
+            loss_dict = {'loss_sensor': loss_sensor}
+            meters.update(**loss_dict)
         running_loss(loss.item())
         running_batch_acc(batch_acc.item())
         
@@ -576,6 +583,7 @@ def get_custom_args(base_config):
     parser.add_argument("--reload_pretrained_swin", type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--learn_mask_enabled', type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--loss_sparse_w', type=float, default=0)
+    parser.add_argument('--loss_sensor_w', type=float, default=0)
     parser.add_argument('--sparse_mask_soft2hard', type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--transfer_method', type=int, default=-1,
                         help="0: load all SwinBERT pre-trained weights, 1: load only pre-trained sparse mask")
@@ -633,10 +641,10 @@ def main(args):
     # Get BERT and tokenizer 
     bert_model, config, tokenizer = get_bert_model(args)
     # build SwinBERT based on training configs
-    if not args.use_car_tensor:
-        vl_transformer = VideoTransformer(args, config, swin_model, bert_model)
-    else:
+    if args.multitask:
         vl_transformer = MultitaskVideoTransformer(args, config, swin_model, bert_model)
+    else:
+        vl_transformer = VideoTransformer(args, config, swin_model, bert_model)
     vl_transformer.freeze_backbone(freeze=args.freeze_backbone)
 
     if args.do_eval:

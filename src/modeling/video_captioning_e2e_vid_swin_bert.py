@@ -21,6 +21,13 @@ class VideoTransformer(torch.nn.Module):
         self.mask_prob = args.mask_prob
         self.mask_token_id = -1
         self.max_img_seq_length = args.max_img_seq_length
+
+        self.max_num_frames = getattr(args, 'max_num_frames', 2)
+        self.expand_car_info = torch.nn.Linear(self.max_num_frames, self.img_feature_dim)
+
+        # add sensor information
+        self.use_car_sensor = getattr(args, 'use_car_sensor', False)
+
         # learn soft attention mask
         self.learn_mask_enabled = getattr(args, 'learn_mask_enabled', False)
         self.sparse_mask_soft2hard = getattr(args, 'sparse_mask_soft2hard', False)
@@ -39,6 +46,13 @@ class VideoTransformer(torch.nn.Module):
             vid_feats = vid_feats.permute(0, 2, 3, 4, 1)
         vid_feats = vid_feats.view(B, -1, self.latent_feat_size)
         vid_feats = self.fc(vid_feats)
+
+        # use video features to predict car tensor
+        if self.use_car_sensor:
+            car_infos = kwargs['car_info']
+            car_infos = self.expand_car_info(car_infos)
+            vid_feats = torch.cat((vid_feats, car_infos), dim=1)
+
         # prepare VL transformer inputs
         kwargs['img_feats'] = vid_feats
         if self.trans_encoder.bert.encoder.output_attentions:

@@ -19,5 +19,6 @@ python -m pdb src/tasks/run_caption_VidSwinBert.py \
         --learn_mask_enabled \
         --loss_sparse_w 0.5 \
         --use_sep_cap \
-        --use_car_tensor \
-        --output_dir ./expr/use_car_tensor
+        --multitask \
+        --loss_sensor_w 0.1 \
+        --output_dir ./expr/use_car_sensor

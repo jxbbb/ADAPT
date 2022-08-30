@@ -1,7 +1,7 @@
 import torch
 from fairscale.nn.misc import checkpoint_wrapper
 import random
-
+from src.modeling.load_sensor_pred_head import get_sensor_pred_model
 
 class MultitaskVideoTransformer(torch.nn.Module):
     def __init__(self, args, config, swin, transformer_encoder):
@@ -22,11 +22,9 @@ class MultitaskVideoTransformer(torch.nn.Module):
         self.mask_token_id = -1
         self.max_img_seq_length = args.max_img_seq_length
 
-        self.max_num_frames = getattr(args, 'max_num_frames', 2)
-        self.expand_car_info = torch.nn.Linear(self.max_num_frames, self.img_feature_dim)
-
         # multitask
-        self.use_car_tensor = getattr(args, 'use_car_tensor', False)
+        self.multitask = getattr(args, 'multitask', False)
+        self.sensor_pred_head = get_sensor_pred_model(args)
 
         # learn soft attention mask
         self.learn_mask_enabled = getattr(args, 'learn_mask_enabled', False)
@@ -47,12 +45,6 @@ class MultitaskVideoTransformer(torch.nn.Module):
         vid_feats = vid_feats.view(B, -1, self.latent_feat_size)
         vid_feats = self.fc(vid_feats)
 
-        # use video features to predict car tensor
-        if self.use_car_tensor:
-            car_infos = kwargs['car_info']
-            car_infos = self.expand_car_info(car_infos)
-            vid_feats = torch.cat((vid_feats, car_infos), dim=1)
-
         # prepare VL transformer inputs
         kwargs['img_feats'] = vid_feats
         if self.trans_encoder.bert.encoder.output_attentions:
@@ -71,7 +63,12 @@ class MultitaskVideoTransformer(torch.nn.Module):
                 learn_att = learn_att.cuda()
                 learn_att.requires_grad = False
             kwargs['attention_mask'][:, -vid_att_len::, -vid_att_len::] = learn_att
+
         outputs = self.trans_encoder(*args, **kwargs)
+
+        sensor_outputs = self.sensor_pred_head(*args, **kwargs)
+        outputs = outputs + sensor_outputs
+
         if self.learn_mask_enabled:
             loss_sparsity = self.get_loss_sparsity(video_attention)  
             outputs = outputs + (loss_sparsity, )          

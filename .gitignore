@@ -92,3 +92,5 @@ gittoken
 /expr/
 *mov
 /demo/
+*.h5
+*.txt

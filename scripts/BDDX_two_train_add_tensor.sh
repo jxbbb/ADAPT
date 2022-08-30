@@ -20,5 +20,5 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --learn_mask_enabled \
         --loss_sparse_w 0.5 \
         --use_sep_cap \
-        --use_car_tensor \
-        --output_dir ./expr/use_car_tensor/lr_0.0005
+        --use_car_sensor \
+        --output_dir ./expr/use_car_sensor/lr_0.0005
