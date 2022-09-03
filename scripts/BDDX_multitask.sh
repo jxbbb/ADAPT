@@ -7,7 +7,7 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --per_gpu_train_batch_size 4 \
         --per_gpu_eval_batch_size 16 \
         --num_train_epochs 40 \
-        --learning_rate 0.0003 \
+        --learning_rate 0.0002 \
         --max_num_frames 32 \
         --pretrained_2d 0 \
         --backbone_coef_lr 0.05 \
@@ -21,5 +21,6 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --loss_sparse_w 0.5 \
         --use_sep_cap \
         --multitask \
-        --loss_sensor_w 0.01 \
-        --output_dir ./expr/multitask/base
+        --loss_sensor_w 0.05 \
+        --max_grad_norm 20 \
+        --output_dir ./expr/multitask/lr_0.0002_sensor_w_0.05

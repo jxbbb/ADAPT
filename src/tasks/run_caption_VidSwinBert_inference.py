@@ -41,7 +41,7 @@ def _online_video_decode(args, video_path):
 
     for i in range(frames.shape[0]):
         frame = frames[i]
-        Image.fromarray(np.array(frame.permute(1,2,0))).save(f"demo/{i}.png")
+        Image.fromarray(np.array(frame.permute(1,2,0))).save(f"/videocap/demo/{i}.png")
     return frames
 
 def _transforms(args, frames):
@@ -155,7 +155,7 @@ def update_existing_config_for_inference(args):
 
     train_args.eval_model_dir = args.eval_model_dir
     train_args.resume_checkpoint = args.eval_model_dir + 'model.bin'
-    train_args.model_name_or_path = 'models/captioning/bert-base-uncased/'
+    train_args.model_name_or_path = 'bert-base-uncased'
     train_args.do_train = False
     train_args.do_eval = True
     train_args.do_test = True
@@ -194,11 +194,11 @@ def get_custom_args(base_config):
 def main(args):
     args = update_existing_config_for_inference(args)
     # global training_saver
-    args.device = torch.device(args.device)
+    args.device = torch.device("cpu")
     # Setup CUDA, GPU & distributed training
     dist_init(args)
     check_arguments(args)
-    set_seed(args.seed, args.num_gpus)
+    set_seed(args.seed, 0)
     fp16_trainning = None
     logger.info(
         "device: {}, n_gpu: {}, rank: {}, "
