@@ -1,6 +1,6 @@
 CUDA_VISIBLE_DEVICES=1 \
 python -m pdb src/tasks/run_caption_VidSwinBert.py \
-        --config src/configs/VidSwinBert/BDDX_two_default.json \
+        --config src/configs/VidSwinBert/BDDX_multi_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/testing_32frames.yaml \
         --per_gpu_train_batch_size 4 \
