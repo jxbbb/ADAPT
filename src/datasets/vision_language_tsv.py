@@ -332,21 +332,47 @@ class VisionLanguageTSVDataset(object):
             return self.get_image(row[-1]), False
 
     def get_car_info(self, img_key):
-        if self.is_train:
-            info_path = op.join(self.root, "processed_video_info", img_key+".h5")
-            all_infos = h5py.File(info_path)
 
-            info_meta_data = torch.zeros((2, self.decoder_num_frames))
-            for key in all_infos.keys():
-                assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
-            info_meta_data = torch.stack([torch.tensor(all_infos['curvature'], dtype=torch.float32), 
-                                                torch.tensor(all_infos['speed'], dtype=torch.float32), 
-                                                # torch.tensor(all_infos['accelerator'])
-                                                ], dim=0,)
-            assert info_meta_data.shape == (2, self.decoder_num_frames)
-            return info_meta_data
-        else:
-            return 0
+        def sampling(start,end,n):
+            if n == 1:
+                return [int(round((start+end)/2.))]
+            if n < 1:
+                raise Exception("behaviour not defined for n<2")
+            step = (end-start)/float(n-1)
+            return [int(round(start+x*step)) for x in range(n)]
+
+        sensor_type_num = 2
+        infos = []
+        info_path = op.join(self.root, "processed_video_info", img_key+".h5")
+        if not op.exists(info_path):
+            return torch.zeros((sensor_type_num, self.decoder_num_frames))
+        all_infos = h5py.File(info_path)
+
+        info_meta_data = torch.zeros((sensor_type_num, self.decoder_num_frames))
+        for key in all_infos.keys():
+            samp_id = sampling(0, all_infos[key].shape[0]-1, self.decoder_num_frames)
+            if key == 'speed':
+                infos.append(torch.tensor(all_infos[key], dtype=torch.float32)[samp_id])
+            if key == 'course':
+                courses = torch.tensor(all_infos[key], dtype=torch.float32)[samp_id]
+                new_courses=[]
+                for i in range(len(samp_id)):
+                    if i ==0:
+                        new_courses.append(0)
+                    else:
+                        if courses[i]-courses[i-1] <= -180:
+                            new_courses.append(courses[i]-courses[i-1]+360)
+                        elif courses[i]-courses[i-1] > 180:
+                            new_courses.append(courses[i]-courses[i-1]-360)
+                        else:
+                            new_courses.append(courses[i]-courses[i-1])
+                infos.append(torch.tensor(new_courses, dtype=torch.float32))
+            # assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
+        # infos.append(torch.tensor(all_infos['curvature'], dtype=torch.float32))
+        # infos.append(torch.tensor(all_infos['speed'], dtype=torch.float32))
+        info_meta_data = torch.stack(infos, dim=0)
+        assert info_meta_data.shape == (sensor_type_num, self.decoder_num_frames)
+        return info_meta_data
 
     def __len__(self):
         return len(self.img_line_list)

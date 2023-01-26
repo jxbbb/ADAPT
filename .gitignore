@@ -90,6 +90,7 @@ Thumbs.db
 gittoken
 
 /expr/
+/expr*/
 *mov
 /demo/
 *.h5

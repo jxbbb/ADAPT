@@ -158,6 +158,7 @@ def update_existing_config_for_inference(args):
     train_args.model_name_or_path = 'bert-base-uncased'
     train_args.do_train = False
     train_args.do_eval = True
+    train_args.do_signal_eval = True if hasattr(args, 'do_signal_eval') and args.do_signal_eval else False
     train_args.do_test = True
     train_args.val_yaml = args.val_yaml
     train_args.test_video_fname = args.test_video_fname

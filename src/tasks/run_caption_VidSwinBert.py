@@ -13,6 +13,7 @@ import datetime
 import torch
 import torch.distributed as dist
 import gc
+import numpy as np
 import deepspeed
 from apex import amp
 from apex.parallel import DistributedDataParallel as DDP
@@ -293,53 +294,9 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                 if args.evaluate_during_training:
                     logger.info(f"Perform evaluation at iteration {iteration}, global_step {global_step}")
                     evaluate_file = evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
+                    signal_evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
                     if get_world_size() > 1:
                         dist.barrier()
-                    if is_main_process():
-                        if args.use_sep_cap:
-                            evaluate_files = [evaluate_file.replace('BDDX', 'BDDX_des'), evaluate_file.replace('BDDX', 'BDDX_exp')]
-                            caps_name = ['des', 'exp']
-                            score_des_add_exp = 0
-                            for cap_ord, eval_file in enumerate(evaluate_files):
-                                with open(eval_file, 'r') as f:
-                                    res = json.load(f)
-                                val_log = {f'valid/{caps_name[cap_ord]}_{k}': v for k,v in res.items()}
-                                TB_LOGGER.log_scalar_dict(val_log)
-                                aml_run.log(name='CIDEr', value=float(res['CIDEr']))
-
-                                score_des_add_exp += res['CIDEr']
-
-                                if cap_ord == 1 and (res['CIDEr'] > best_score_exp or res['Bleu_4'] > best_B4_exp or score_des_add_exp > best_score_des_add_exp):
-                                    print(f"best B4:{best_B4_exp}\tbest exp cider:{best_score_exp}\tbest cider sum:{score_des_add_exp}")
-                                    training_saver.save_model(
-                                        checkpoint_dir, global_step, model, optimizer)
-
-                                if cap_ord == 1:
-                                    best_score_exp = max(best_score_exp, res['CIDEr'])
-                                    best_B4_exp = max(best_B4_exp, res['Bleu_4'])
-                                    best_score_des_add_exp = max(best_score_des_add_exp, score_des_add_exp)
-                                    res['epoch'] = epoch
-                                    res['iteration'] = iteration
-                                    res['best_B4_exp'] = best_B4_exp
-                                    res['best_CIDEr_exp'] = best_score_exp
-                                    res['best_CIDEr_sum'] = score_des_add_exp
-                                    eval_log.append(res)
-                                    with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
-                                        json.dump(eval_log, f)
-                        else:
-                            with open(evaluate_file, 'r') as f:
-                                res = json.load(f)
-                            val_log = {f'valid/{k}': v for k,v in res.items()}
-                            TB_LOGGER.log_scalar_dict(val_log)
-                            aml_run.log(name='CIDEr', value=float(res['CIDEr']))
-                            
-                            best_score = max(best_score, res['CIDEr'])
-                            res['epoch'] = epoch
-                            res['iteration'] = iteration
-                            res['best_CIDEr'] = best_score
-                            eval_log.append(res)
-                            with open(op.join(args.output_dir, args.val_yaml.replace('/','_')+'eval_logs.json'), 'w') as f:
-                                json.dump(eval_log, f)
                     if get_world_size() > 1:
                         dist.barrier()                
 
@@ -528,6 +485,147 @@ def test(args, test_dataloader, model, tokenizer, predict_file):
     if world_size > 1:
         dist.barrier()
 
+def signal_evaluate(args, val_dataloader, model, tokenizer, output_dir):
+    predict_file = get_predict_file(output_dir, args,
+            val_dataloader.dataset.yaml_file)
+
+    cls_token_id, sep_token_id, pad_token_id, mask_token_id, period_token_id = \
+        tokenizer.convert_tokens_to_ids([tokenizer.cls_token, tokenizer.sep_token,
+        tokenizer.pad_token, tokenizer.mask_token, '.'])
+    world_size = get_world_size()
+    
+    cache_file = predict_file
+
+    model.eval()
+    def gen_rows():
+        time_meter = 0
+        # restore existing results for long running inference tasks
+        exist_key2pred = {}
+        tmp_file = cache_file + '.tmp.copy'
+        if op.isfile(tmp_file):
+            with open(tmp_file, 'r') as fp:
+                for line in fp:
+                    parts = line.strip().split('\t')
+                    if len(parts) == 2:
+                        exist_key2pred[parts[0]] = parts[1]
+
+        gt_signals = []
+        pred_signals = []
+
+        with torch.no_grad():
+            for step, (img_keys, batch, meta_data) in tqdm(enumerate(val_dataloader)):
+
+                # if step > 4:
+                #     break
+
+                batch = tuple(t.to(args.device) for t in batch)
+                inputs = {'is_decode': True,
+                    'input_ids': batch[0], 'attention_mask': batch[1],
+                    'token_type_ids': batch[2], 'img_feats': batch[3],
+                    'masked_pos': batch[4],
+                    'car_info': batch[5],
+                    'do_sample': False,
+                    'bos_token_id': cls_token_id,
+                    'pad_token_id': pad_token_id,
+                    'eos_token_ids': [sep_token_id],
+                    'mask_token_id': mask_token_id,
+                    # for adding od labels
+                    'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
+                    # hyperparameters of beam search
+                    'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
+                    'use_sep_cap': args.use_sep_cap,
+                    'num_beams': args.num_beams,
+                    "temperature": args.temperature,
+                    "top_k": args.top_k,
+                    "top_p": args.top_p,
+                    "repetition_penalty": args.repetition_penalty,
+                    "length_penalty": args.length_penalty,
+                    "num_return_sequences": args.num_return_sequences,
+                    "num_keep_best": args.num_keep_best,
+                }
+
+                
+                if args.deepspeed_fp16:
+                    # deepspeed does not auto cast inputs.
+                    inputs = fp32_to_fp16(inputs)
+
+                if args.mixed_precision_method == "fairscale":
+                    with torch.cuda.amp.autocast(enabled=True):
+                        outputs = model(**inputs)
+                else:
+                    outputs = model(**inputs)
+                outputs = outputs
+                for b in range(len(batch[0])):
+                    if not (batch[5][b]==0).all():
+                        gt_signals.append(batch[5][b])
+                        pred_signals.append(outputs[-2][b])
+
+        return torch.stack(gt_signals, dim=0), torch.stack(pred_signals, dim=0)
+
+    gt_signals, pred_signals = gen_rows()
+
+    if world_size > 1:
+        dist.barrier()
+
+    if is_main_process():
+        print("computing signal prediction score")
+        sigma_1 = 0.1
+        sigma_2 = 0.5
+        sigma_3 = 1
+        sigma_4 = 5
+        sigma_5 = 10
+
+        sig1_acc = 0
+        sig2_acc = 0
+        sig3_acc = 0
+        sig4_acc = 0
+        sig5_acc = 0
+        assert len(gt_signals) == len(pred_signals)
+
+        gt_course = gt_signals[:, 0, :].cpu()
+        gt_speed = gt_signals[:, 1, :].cpu()
+        pred_course = pred_signals[:, :, 0].cpu()
+        pred_speed = pred_signals[:, :, 1].cpu()
+        from sklearn.metrics import mean_squared_error
+        import numpy as np
+        rmse_course = np.sqrt(mean_squared_error(gt_course, pred_course))
+        rmse_speed = np.sqrt(mean_squared_error(gt_speed, pred_speed))
+
+        print(f"rmse \t course:{rmse_course} rmse_speed:{rmse_speed}")
+        all_num = len(gt_course)*32
+        sig1_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_1)/all_num,
+                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_1)/all_num)
+        print(f"sig1_acc \t {sig1_acc}")
+        sig2_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_2)/all_num,
+                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_2)/all_num)
+        print(f"sig1_acc \t {sig2_acc}")
+        sig3_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_3)/all_num,
+                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_3)/all_num)
+        print(f"sig1_acc \t {sig3_acc}")
+        sig4_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_4)/all_num,
+                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_4)/all_num)
+        print(f"sig1_acc \t {sig4_acc}")
+        sig5_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_5)/all_num,
+                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_5)/all_num)
+        print(f"sig1_acc \t {sig5_acc}")
+        print(all_num)
+        if not os.path.exists(op.dirname(predict_file)):
+            os.makedirs(op.dirname(predict_file))
+        with open(op.join(op.dirname(predict_file), 'test_data.json'), 'w') as json_file:
+            json_file.write(str({"rmse_course":rmse_course,
+                    "rmse_speed":rmse_speed,
+                    "sig1_acc":sig1_acc,
+                    "sig2_acc":sig2_acc,
+                    "sig3_acc":sig3_acc,
+                    "sig4_acc":sig4_acc,
+                    "sig5_acc":sig5_acc,
+                    }))
+    if world_size > 1:
+        dist.barrier()
+    if get_world_size() > 1:
+        dist.barrier()
+    return
+
 def check_arguments(args):
     # shared basic checks
     basic_check_arguments(args)
@@ -568,6 +666,7 @@ def update_existing_config_for_inference(args):
     train_args.model_name_or_path = 'models/captioning/bert-base-uncased/'
     train_args.do_train = False
     train_args.do_eval = True
+    train_args.do_signal_eval = True if hasattr(args, 'do_signal_eval') and args.do_signal_eval else False
     train_args.do_test = True
     train_args.val_yaml = args.val_yaml
     train_args.test_video_fname = args.test_video_fname
@@ -753,7 +852,10 @@ def main(args):
     elif args.do_eval:
         val_dataloader = make_data_loader(args, args.val_yaml, tokenizer, args.distributed, is_train=False)
         args, vl_transformer, _, _ = mixed_precision_init(args, vl_transformer)
-        evaluate_file = evaluate(args, val_dataloader, vl_transformer, tokenizer, args.eval_model_dir)
+        if args.do_signal_eval:
+            signal_evaluate(args, val_dataloader, vl_transformer, tokenizer, args.eval_model_dir)
+        else:
+            evaluate_file = evaluate(args, val_dataloader, vl_transformer, tokenizer, args.eval_model_dir)
     
     if args.distributed:
         dist.destroy_process_group()
