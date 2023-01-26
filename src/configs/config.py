@@ -104,6 +104,8 @@ class SharedConfigs(object):
                             help="use car tensor to do multitask")
         parser.add_argument("--multitask", type=str_to_bool, nargs='?', const=True, default=False,
                             help="use car tensor to do multitask")
+        parser.add_argument("--only_signal", type=str_to_bool, nargs='?', const=True, default=False,
+                            help="only do control signal prediction task")
         parser.add_argument("--unique_labels_on", type=str_to_bool, nargs='?', const=True, default=False,
                             help="Use unique labels only.")
         parser.add_argument("--no_sort_by_conf", type=str_to_bool, nargs='?', const=True, default=False,

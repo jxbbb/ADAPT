@@ -35,7 +35,7 @@ class Sensor_Pred_Head(torch.nn.Module):
     def forward(self, *args, **kwargs):
         is_decode = kwargs.get('is_decode', False)
 
-        if is_decode:
+        if False:
             return None, None
         else: 
             vid_feats = kwargs['img_feats']
