@@ -333,7 +333,6 @@ class VisionLanguageTSVDataset(object):
             return self.get_image(row[-1]), False
 
     def get_car_info(self, img_key):
-    
         def sampling(start,end,n):
             if n == 1:
                 return [int(round((start+end)/2.))]

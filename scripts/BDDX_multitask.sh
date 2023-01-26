@@ -18,9 +18,9 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --deepspeed_fp16 \
         --gradient_accumulation_steps 4 \
         --learn_mask_enabled \
-        --loss_sparse_w 0.5 \
+        --loss_sparse_w 0.1 \
         --use_sep_cap \
         --multitask \
-        --loss_sensor_w 0.003 \
+        --loss_sensor_w 0.05 \
         --max_grad_norm 1 \
-        --output_dir ./expr1/multitask/sensor_curvature_accelerator_speedaa
+        --output_dir ./expr/multitask/sensor_course_speed

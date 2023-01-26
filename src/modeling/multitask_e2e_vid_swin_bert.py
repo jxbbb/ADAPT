@@ -26,6 +26,7 @@ class MultitaskVideoTransformer(torch.nn.Module):
         self.multitask = getattr(args, 'multitask', False)
         self.only_signal = getattr(args, 'only_signal', False)
         self.sensor_pred_head = get_sensor_pred_model(args)
+        self.do_signal_eval = getattr(args, 'do_signal_eval', False)
 
         # learn soft attention mask
         self.learn_mask_enabled = getattr(args, 'learn_mask_enabled', False)
@@ -140,5 +141,3 @@ class MultitaskVideoTransformer(torch.nn.Module):
     def freeze_backbone(self, freeze=True):
         for _, p in self.swin.named_parameters():
             p.requires_grad =  not freeze
-
- 

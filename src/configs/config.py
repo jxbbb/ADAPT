@@ -225,6 +225,9 @@ class SharedConfigs(object):
         self.parser.add_argument("--do_eval", type=str_to_bool, nargs='?',
                                  const=True, default=False,
                                  help="Whether to run evaluation.")
+        self.parser.add_argument("--do_signal_eval", type=str_to_bool, nargs='?',
+                                 const=True, default=False,
+                                 help="Whether to run evaluation.")
         self.parser.add_argument("--evaluate_during_training", type=str_to_bool,
                                  nargs='?', const=True, default=False,
                                  help="Run evaluation during training at each save_steps.")
