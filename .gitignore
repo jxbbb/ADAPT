@@ -11,7 +11,6 @@ src/evalcap/coco_caption/
 src/evalcap/cider/
 src/evalcap/coco_caption
 src/evalcap/cider
-# amulet/longer_seq_exp_linjie
 
 .vscode 
 
@@ -44,8 +43,6 @@ linjli
 /models
 *.zip
 ./models
-/docs/
-./docs/
 *.jsonl
 *.json
 
