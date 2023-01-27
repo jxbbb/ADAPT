@@ -22,6 +22,7 @@ class bcolors:
 
 print(bcolors.WARNING + "demo for driving scene video caption" + bcolors.ENDC)
 
+path = "expr/multitask/sensor_course/checkpoint-36-9216/"
 data_path = 'Videos/videos/053da4e3-48ec49ba.mov'
 frame_per_caption = 20
 
@@ -191,7 +192,6 @@ def visulize(des, exp):
     frames = np.array(frames).astype(int)
     return frames
 
-path = "expr/multitask/sensor_course/checkpoint-36-9216/"
 
 all_des = json.load(open(path+"pred.BDDX_des.testing_32frames.beam1.max15_coco_format", "r"))
 all_exp = json.load(open(path+"pred.BDDX_exp.testing_32frames.beam1.max15_coco_format", "r"))
