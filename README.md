@@ -65,7 +65,7 @@ Our latest docker image `jxbbb/adapt:latest` is adapted from `linjieli222/videoc
 
 ## Model Card
 
-* We release our best performing checkpoints. You can download these models at [ [Google Drive]() ] and place them under `models` directory. If the directory does not exist, you can create one.
+* We release our best performing checkpoints. You can download these models at [ [Google Drive](https://drive.google.com/drive/folders/1GYO9MVgrDMBUXdULgs5mzmcpDstAGCn4?usp=share_link) ] and place them under `models` directory. If the directory does not exist, you can create one.
 
 ## Requirements 
 We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) for easier reproduction. Please install the following:
