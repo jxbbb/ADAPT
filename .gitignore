@@ -94,3 +94,4 @@ gittoken
 /quatitive_results/
 !src/configs/VidSwinBert/BDDX_two_default.json
 !src/configs/VidSwinBert/BDDX_multi_default.json
+/checkpoints/

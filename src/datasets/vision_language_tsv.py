@@ -341,7 +341,9 @@ class VisionLanguageTSVDataset(object):
             step = (end-start)/float(n-1)
             return [int(round(start+x*step)) for x in range(n)]
 
-        sensor_type_num = 2
+        sensor_type_num = 1
+        # all_choices = ['course', 'curvature', 'accelerator', 'speed']
+        all_choices = ['course']
         infos = []
         info_path = op.join(self.root, "processed_video_info", img_key+".h5")
         if not op.exists(info_path):
@@ -351,9 +353,9 @@ class VisionLanguageTSVDataset(object):
         info_meta_data = torch.zeros((sensor_type_num, self.decoder_num_frames))
         for key in all_infos.keys():
             samp_id = sampling(0, all_infos[key].shape[0]-1, self.decoder_num_frames)
-            if key == 'speed':
+            if key == 'speed' and key in all_choices:
                 infos.append(torch.tensor(all_infos[key], dtype=torch.float32)[samp_id])
-            if key == 'course':
+            if key == 'course' and key in all_choices:
                 courses = torch.tensor(all_infos[key], dtype=torch.float32)[samp_id]
                 new_courses=[]
                 for i in range(len(samp_id)):
@@ -368,8 +370,10 @@ class VisionLanguageTSVDataset(object):
                             new_courses.append(courses[i]-courses[i-1])
                 infos.append(torch.tensor(new_courses, dtype=torch.float32))
             # assert all_infos[key].shape[0] == self.decoder_num_frames, "tensor infos get wrong"
-        # infos.append(torch.tensor(all_infos['curvature'], dtype=torch.float32))
-        # infos.append(torch.tensor(all_infos['speed'], dtype=torch.float32))
+            if key == 'curvature' and key in all_choices:
+                infos.append(torch.tensor(all_infos['curvature'], dtype=torch.float32))
+            if key == 'accelerator' and key in all_choices:
+                infos.append(torch.tensor(all_infos['accelerator'], dtype=torch.float32))
         info_meta_data = torch.stack(infos, dim=0)
         assert info_meta_data.shape == (sensor_type_num, self.decoder_num_frames)
         return info_meta_data

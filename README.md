@@ -65,7 +65,7 @@ Our latest docker image `jxbbb/adapt:latest` is adapted from `linjieli222/videoc
 
 ## Model Card
 
-* We release our best performing checkpoints. You can download these models at [ [Google Drive]() ] and place them under `models` directory. If the directory does not exist, you can create one.
+* We release our best performing checkpoints. You can download these models at [ [Google Drive]() ] and place them under `checkpoints` directory. If the directory does not exist, you can create one.
 
 ## Requirements 
 We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) for easier reproduction. Please install the following:
@@ -89,7 +89,8 @@ sh ./scripts/data_preprocess.sh
 The resulting data structure should follow the hierarchy as below.
 
 ```bash
-${REPO_DIR}  
+${REPO_DIR}
+|-- checkpoints
 |-- datasets  
 |   |-- BDDX
 |   |   |-- frame_tsv
@@ -115,9 +116,13 @@ ${REPO_DIR}
 |   |   |-- testing...
 |   |   |-- ...
 |   |   |-- testing...
-|-- docs 
-|-- src
+|-- docs
+|-- models
+|   |-- basemodel
+|   |-- captioning
+|   |-- video_swin_transformer
 |-- scripts 
+|-- src
 |-- README.md 
 |-- ... 
 |-- ... 

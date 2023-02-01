@@ -20,7 +20,7 @@ class Sensor_Pred_Head(torch.nn.Module):
             args.model_name_or_path, num_labels=2, finetuning_task='image_captioning')
         self.encoder = BertEncoder(self.config)
 
-        self.sensor_dim = 2
+        self.sensor_dim = 1
         self.sensor_embedding = torch.nn.Linear(self.sensor_dim, self.config.hidden_size)
         self.sensor_dropout = nn.Dropout(self.config.hidden_dropout_prob)
 

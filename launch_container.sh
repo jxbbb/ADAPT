@@ -20,5 +20,5 @@ docker run --gpus '"'device=$CUDA_VISIBLE_DEVICES'"' --ipc=host --rm -it \
     --mount src=$MODEL_DIR,dst=/videocap/models,type=bind,readonly \
     --mount src=$OUTPUT,dst=/videocap/output,type=bind \
     -e NVIDIA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
-    -w /videocap linjieli222/videocap_torch1.7:fairscale \
+    -w /videocap jxbbb/adapt:latest \
     bash -c "source /videocap/setup.sh && bash" 

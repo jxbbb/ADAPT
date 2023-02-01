@@ -85,7 +85,7 @@ def make_data_loader(args, yaml_file, tokenizer, is_distributed=True,
         is_train=True, start_iter=0, num_gpus=8):
 
     dataset = build_dataset(args, yaml_file, tokenizer, is_train=is_train)
-    # a,b,c = dataset.__getitem__(100)
+    a,b,c = dataset.__getitem__(100)
     # a,b,c = dataset.__getitem__(1100)
     if is_train==True:
         shuffle = True
