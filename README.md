@@ -19,7 +19,7 @@ This repository contains the training and testing of the proposed framework in p
   - [Table of contents](#table-of-contents)
   - [Getting Started](#getting-started)
     - [Launch Docker Container](#launch-docker-container)
-  - [Model Card](#model-card)
+  - [Models](#models)
   - [Requirements](#requirements)
   - [Dataset Preparation](#dataset-preparation)
   - [Quick Demo](#quick-demo)
@@ -63,9 +63,9 @@ Our latest docker image `jxbbb/adapt:latest` is adapted from `linjieli222/videoc
 - [x] fairscale
 
 
-## Model Card
+## Models
 
-* We release our best performing checkpoints. You can download these models at [ [Google Drive]() ] and place them under `checkpoints` directory. If the directory does not exist, you can create one.
+* We release our best performing checkpoints. You can download these models at [ [Google Drive](https://drive.google.com/drive/folders/1GYO9MVgrDMBUXdULgs5mzmcpDstAGCn4?usp=share_link) ] and place them under `checkpoints` directory. If the directory does not exist, you can create one.
 
 ## Requirements 
 We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) for easier reproduction. Please install the following:
@@ -80,11 +80,8 @@ so that docker commands can be run without sudo.
 
 ## Dataset Preparation
 
-You can ether download the preprocessed data in [this site](), or just download the raw videos and car information in [this site](), and preprocess it with the following command:
+You can ether download the preprocessed data in [this site](), or just download the raw videos and car information in [this site](https://github.com/JinkyuKimUCB/BDD-X-dataset), and preprocess it with the code in `src\prep`:
 
-```bash
-sh ./scripts/data_preprocess.sh
-```
 
 The resulting data structure should follow the hierarchy as below.
 
