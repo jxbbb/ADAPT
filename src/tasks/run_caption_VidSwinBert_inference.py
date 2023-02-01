@@ -41,6 +41,7 @@ def _online_video_decode(args, video_path):
 
     for i in range(frames.shape[0]):
         frame = frames[i]
+        print(f"save images at demo/{i}.png")
         Image.fromarray(np.array(frame.permute(1,2,0))).save(f"/videocap/demo/{i}.png")
     return frames
 
@@ -115,6 +116,7 @@ def inference(args, video_path, model, tokenizer, tensorizer):
                 cap = tokenizer.decode(cap.tolist(), skip_special_tokens=True)
                 logger.info(f"Prediction: {cap}")
                 logger.info(f"Conf: {conf.item()}")
+                logger.info("Note that this is prediction of the first five seconds(0-5s) of the video, you can change the time in src/tasks/run_caption_VidSwinBert_inference.py")              
 
     logger.info(f"Inference model computing time: {time_meter} seconds")
 
@@ -195,7 +197,7 @@ def get_custom_args(base_config):
 def main(args):
     args = update_existing_config_for_inference(args)
     # global training_saver
-    args.device = torch.device("cpu")
+    args.device = torch.device(args.device)
     # Setup CUDA, GPU & distributed training
     dist_init(args)
     check_arguments(args)

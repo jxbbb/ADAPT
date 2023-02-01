@@ -22,10 +22,12 @@ class bcolors:
 
 print(bcolors.WARNING + "demo for driving scene video caption" + bcolors.ENDC)
 
-path = "expr/multitask/sensor_course/checkpoint-36-9216/"
-data_path = 'Videos/videos/053da4e3-48ec49ba.mov'
+path = "checkpoints/basemodel/checkpoints/"
+data_path = 'demo/053da4e3-48ec49ba.mov'
+output_path = 'demo/demo.mp4'
 frame_per_caption = 20
 
+os.makedirs("demo", exist_ok=True)
 
 def get_vid_info(file_obj):
     nFrames = int(file_obj.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -116,7 +118,8 @@ def visulize(des, exp):
 
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # avi格式
         # fourcc = cv2.VideoWriter_fourcc(*'mp4v')#MP4格式
-        out = cv2.VideoWriter('./demo/demo.mp4', fourcc, 30,
+
+        out = cv2.VideoWriter(output_path, fourcc, 30,
                               (img_width, img_height))
 
         for _ in tqdm(range(nFrames)):
@@ -193,9 +196,10 @@ def visulize(des, exp):
     return frames
 
 
-all_des = json.load(open(path+"pred.BDDX_des.testing_32frames.beam1.max15_coco_format", "r"))
-all_exp = json.load(open(path+"pred.BDDX_exp.testing_32frames.beam1.max15_coco_format", "r"))
+all_des = json.load(open(path+"pred.BDDX_des.testing_32frames.beam1.max15_coco_format.json", "r"))
+all_exp = json.load(open(path+"pred.BDDX_exp.testing_32frames.beam1.max15_coco_format.json", "r"))
 
 for i in range(len(all_des)):
+    
     visulize(all_des[i], all_exp[i])
 

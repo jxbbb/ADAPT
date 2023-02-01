@@ -132,7 +132,7 @@ We provide a demo to run end-to-end inference on the test video.
 Our inference code will take a video as input, and generate video caption.
 
 ```bash
-python demo.py
+sh scripts/inference.sh
 ```
 
 The prediction should look like

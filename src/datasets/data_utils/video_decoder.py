@@ -343,11 +343,12 @@ def decode(
     frames = temporal_sampling(frames, start_idx, end_idx, num_frames)
     frames = [frame.to_rgb().to_ndarray() for frame in frames]
 
-    rorate = 360 - int(container.streams.video[0].metadata.get('rotate'))
-    begin_time = time.time()
-    for i in range(rorate//90):
-        frames = [np.rot90(frame) for frame in frames]
-    rotate_time = time.time() - begin_time
-    print(f"rorate time {rotate_time}")
+    if container.streams.video[0].metadata.get('rotate') is not None:
+        rorate = 360 - int(container.streams.video[0].metadata.get('rotate'))
+        begin_time = time.time()
+        for i in range(rorate//90):
+            frames = [np.rot90(frame) for frame in frames]
+        rotate_time = time.time() - begin_time
+        print(f"rorate time {rotate_time}")
     frames = torch.as_tensor(np.stack(frames))
     return frames, video_max_pts
