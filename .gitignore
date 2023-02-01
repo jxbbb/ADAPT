@@ -96,4 +96,4 @@ gittoken
 !src/configs/VidSwinBert/BDDX_multi_default.json
 /checkpoints/
 demo.py
-!053da4e3-48ec49ba.mov
+!demo/053da4e3-48ec49ba.mov

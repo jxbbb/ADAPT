@@ -1,5 +1,5 @@
 CUDA_VISIBLE_DEVICES=1 \
-python -m pdb src/tasks/run_signal.py \
+python src/tasks/run_signal.py \
         --config src/configs/VidSwinBert/BDDX_multi_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/testing_32frames.yaml \
