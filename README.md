@@ -2,7 +2,7 @@
 
  <img src="docs/adapt-overview.jpg" width="650"> 
 
-This repository is an official implementation of [ADAPT: Action-aware Driving Caption Transformer](https://arxiv.org/abs/*******), accepted by ICRA 2023.
+This repository is an official implementation of [ADAPT: Action-aware Driving Caption Transformer](https://arxiv.org/abs/2302.00673), accepted by ICRA 2023.
 
 Created by Bu Jin, Xinyu Liu, Yupeng Zheng, Pengfei Li, Hao Zhao, Tong Zhang, Yuhang Zheng, Guyue Zhou and Jingjing Liu from Institute for [AI Industry Research(AIR), Tsinghua University](https://air.tsinghua.edu.cn/).
 
@@ -201,8 +201,11 @@ ${REPO_DIR}
 If you find our work useful in your research, please consider citing:
 
 ```bibtex
-@inproceedings{
-TODO
+@article{jin2023adapt,
+  title={ADAPT: Action-aware Driving Caption Transformer},
+  author={Jin, Bu and Liu, Xinyu and Zheng, Yupeng and Li, Pengfei and Zhao, Hao and Zhang, Tong and Zheng, Yuhang and Zhou, Guyue and Liu, Jingjing},
+  journal={arXiv preprint arXiv:2302.00673},
+  year={2023}
 }
 ```
 
