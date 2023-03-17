@@ -97,5 +97,8 @@ gittoken
 /checkpoints/
 demo.py
 /demo/*.png
+/demo/*.jpg
 !/demo/
 !/demo/053da4e3-48ec49ba.mov
+
+/attn_visualize*/

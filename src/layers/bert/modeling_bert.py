@@ -388,6 +388,29 @@ class BertSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
+
+        visualize_attn = False
+        if visualize_attn:
+            import numpy as np
+            from visualize import visualize_grid_attention_v2
+            import os
+            for i in range(len(attention_probs[0])):
+                os.makedirs("attn_visualize", exist_ok=True)
+                j = len(os.listdir("attn_visualize"))//12
+                save_path = f"attn_visualize/head_{j}_{i}"
+                os.makedirs(save_path, exist_ok=True)
+                # if j % 5 != 0:
+                #     continue
+                # if i != 11:
+                #     continue
+                visualize_grid_attention_v2("demo/black.jpg",
+                           save_path=save_path,
+                           attention_mask=(np.array(attention_probs[0][-1].cpu())-np.eye(len(attention_probs[0][-1]))),
+                           save_image=True,
+                           save_original_image=False,
+                           quality=100)
+                np.save(os.path.join(save_path, "atten.npy"), np.array(attention_probs[0][-1].cpu()))
+
         outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
         return outputs
 
