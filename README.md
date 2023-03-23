@@ -57,9 +57,9 @@ sh launch_container.sh
 ```
 
 Our latest docker image `jxbbb/adapt:latest` is adapted from `linjieli222/videocap_torch1.7:fairscale`, which supports the following mixed precision training
-- [x] Torch.amp (with limited GPU memory optimization, deprecated from this codebase)
+- [x] Torch.amp
 - [x] Nvidia Apex O2
-- [x] deepspeed (Best setting on VATEX, deepspeed fp16 with zero_opt_stage=1)
+- [x] deepspeed
 - [x] fairscale
 
 
