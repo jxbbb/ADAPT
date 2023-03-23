@@ -67,6 +67,9 @@ Our latest docker image `jxbbb/adapt:latest` is adapted from `linjieli222/videoc
 
 * We release our best performing checkpoints. You can download these models at [ [Google Drive](https://drive.google.com/drive/folders/1GYO9MVgrDMBUXdULgs5mzmcpDstAGCn4?usp=share_link) ] and place them under `checkpoints` directory. If the directory does not exist, you can create one.
 
+* We release the base video-swin models we used during training in [ [Google Drive](https://drive.google.com/drive/folders/1yQ2qxxXFZjeq67566XayTnk0yRCJCkJZ?usp=share_link) ]. If you want to use other pretrained video-swin models, you can refer to [Video-Swin-Transformer](https://github.com/SwinTransformer/Video-Swin-Transformer#results-and-models).
+
+
 ## Requirements 
 We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) for easier reproduction. Please install the following:
   - [nvidia driver](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#package-manager-installation) (418+), 
