@@ -83,7 +83,7 @@ so that docker commands can be run without sudo.
 
 ## Dataset Preparation
 
-You can ether download the preprocessed data in [this site](https://pan.baidu.com/s/1_eW-kLVBhf8lWGObGa4i9A?pwd=7zrz), or just download the raw videos and car information in [this site](https://github.com/JinkyuKimUCB/BDD-X-dataset), and preprocess it with the code in `src\prep`:
+You can ether download the preprocessed data in [this site](https://pan.baidu.com/s/1_eW-kLVBhf8lWGObGa4i9A?pwd=7zrz), or just download the raw videos and car information in [this site](https://github.com/JinkyuKimUCB/BDD-X-dataset), and preprocess it with the code in `src/prepro`:
 
 
 The resulting data structure should follow the hierarchy as below.
