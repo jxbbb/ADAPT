@@ -18,7 +18,7 @@ This reposity will be updated soon, including:
 - [ ] Uploading the **Raw Data** of BDDX, along with an easier processing script.
 - [ ] Uploading the **Visualization Codes** of raw data and results.
 - [ ] Updating the **Experiment Codes** to make it easier to get up with.
-- [x] Uploading the **[Conda Environments](#1.-installation-as-conda)** of ADAPT.
+- [x] Uploading the **[Conda Environments](#1-installation-as-conda)** of ADAPT.
 
 
 
