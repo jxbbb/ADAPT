@@ -12,6 +12,15 @@ We propose an end-to-end transformer-based architecture, ADAPT (Action-aware Dri
 
 This repository contains the training and testing of the proposed framework in paper, as well as the demo in smulator environment and real word.
 
+## Note
+This reposity will be updated soon, including:
+- [x] Uploading the **[Preprocessed Data](#dataset-preparation)** of BDDX.
+- [ ] Uploading the **Raw Data** of BDDX, along with an easier processing script.
+- [ ] Uploading the **Visualization Codes** of raw data and results.
+- [ ] Updating the **Experiment Codes** to make it easier to get up with.
+- [x] Uploading the **[Conda Environments](#1.-installation-as-conda)** of ADAPT.
+
+
 
 ## Table of contents
 - [ADAPT: Action-aware Driving Caption Transformer](#adapt-action-aware-driving-caption-transformer)
@@ -38,16 +47,35 @@ This repository contains the training and testing of the proposed framework in p
 ## Getting Started
 
 
-<!-- ### 1. Installation as Conda
+### 1. Installation as Conda
 
+Create conda environment:
 ```
-conda env create --name LASST python=3.7
-conda install --yes --file requirements.txt
+conda env create --name ADAPT python=3.8
 ```
 
-### 2. Launch Docker Container -->
+Install torch:
+```
+pip install torch==1.13.1+cu116 torchaudio==0.13.1+cu116 torchvision==0.14.1+cu116 -f https://download.pytorch.org/whl/torch_stable.html
+```
 
-### Launch Docker Container
+Install apex:
+```
+git clone https://github.com/NVIDIA/apex
+cd apex
+pip install -v --no-cache-dir ./
+cd ..
+rm -rf apex
+```
+
+Then install other dependency:
+```
+pip install -r requirements.txt
+```
+
+### 2. Launch Docker Container
+
+<!-- ### Launch Docker Container -->
 
 We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) to make it easy to get up. Before you run the `launch_container.sh`, please ensure the directory name is right in `launch_container.sh` and your current directory.
 
