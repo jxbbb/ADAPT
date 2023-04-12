@@ -4,7 +4,15 @@ import random
 from src.modeling.load_sensor_pred_head import get_sensor_pred_model
 
 class MultitaskVideoTransformer(torch.nn.Module):
+    """ This is the multi-task module that performs Driving Caption Generation and Control Signal Prediction. """
     def __init__(self, args, config, swin, transformer_encoder):
+        """ Initializes the model.
+        Parameters:
+            args: basic args of ADAPT, mostly defined in `src/configs/VidSwinBert/BDDX_multi_default.json` and input args
+            config: config of transformer_encoder, mostly defined in `models/captioning/bert-base-uncased/config.json`
+            swin: torch module of the backbone to be used. See `src/modeling/load_swin.py`
+            transformer_encoder: torch module of the transformer architecture. See `src/modeling/load_bert.py`
+        """
         super(MultitaskVideoTransformer, self).__init__()
         self.config = config
         self.use_checkpoint = args.use_checkpoint and not args.freeze_backbone
@@ -22,26 +30,41 @@ class MultitaskVideoTransformer(torch.nn.Module):
         self.mask_token_id = -1
         self.max_img_seq_length = args.max_img_seq_length
 
-        # multitask
-        self.multitask = getattr(args, 'multitask', False)
-        self.only_signal = getattr(args, 'only_signal', False)
+        # get Control Signal Prediction Head
         self.sensor_pred_head = get_sensor_pred_model(args)
-        self.do_signal_eval = getattr(args, 'do_signal_eval', False)
 
-        # learn soft attention mask
+        # if only_signal is True, it means we 
+        # remove Driving Caption Generation head and only use Control Signal Prediction head 
+        self.only_signal = getattr(args, 'only_signal', False)
+
+        # sparse attention mask defined in SwinBert
         self.learn_mask_enabled = getattr(args, 'learn_mask_enabled', False)
         self.sparse_mask_soft2hard = getattr(args, 'sparse_mask_soft2hard', False)
-        
         if self.learn_mask_enabled==True:
             self.learn_vid_att = torch.nn.Embedding(args.max_img_seq_length*args.max_img_seq_length,1)
             self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, *args, **kwargs):
+        """ The forward process of ADAPT, 
+        Parameters:
+            input_ids: word tokens of input sentences tokenized by tokenizer
+            attention_mask: multimodal attention mask in Vision-Language transformer
+            token_type_ids: typen tokens of input sentences, 
+                            0 means it is a narration sentence and 1 means a reasoning sentence, same size with input_ids
+            img_feats: preprocessed frames of the video
+            masked_pos: [MASK] position when performing MLM, used to locate the masked words
+            masked_ids: groung truth of [MASK] when performing MLM
+            car_info: control signals of ego car in the video
+        """
+
+        # video swin to extract video features
         images = kwargs['img_feats']
         B, S, C, H, W = images.shape  # batch, segment, chanel, hight, width
         # (B x S x C x H x W) --> (B x C x S x H x W)
         images = images.permute(0, 2, 1, 3, 4)
         vid_feats = self.swin(images)
+
+        # tokenize video features to video tokens
         if self.use_grid_feat==True:
             vid_feats = vid_feats.permute(0, 2, 3, 4, 1)
         vid_feats = vid_feats.view(B, -1, self.latent_feat_size)
@@ -52,8 +75,12 @@ class MultitaskVideoTransformer(torch.nn.Module):
         if self.trans_encoder.bert.encoder.output_attentions:
             self.trans_encoder.bert.encoder.set_output_attentions(False)
         
-        if not self.only_signal:
-
+        if self.only_signal:
+            # only Control Signal Prediction head 
+            sensor_outputs = self.sensor_pred_head(*args, **kwargs)        
+            return sensor_outputs
+        
+        else:
             # learn soft attention mask
             if self.learn_mask_enabled:
                 kwargs['attention_mask'] = kwargs['attention_mask'].float()
@@ -69,19 +96,21 @@ class MultitaskVideoTransformer(torch.nn.Module):
                     learn_att.requires_grad = False
                 kwargs['attention_mask'][:, -vid_att_len::, -vid_att_len::] = learn_att
 
+            # Driving Caption Generation head, output is ()
             outputs = self.trans_encoder(*args, **kwargs)
 
+            # Control Signal Prediction head, output is ()
             sensor_outputs = self.sensor_pred_head(*args, **kwargs)
+
+            # concat two outputs
             outputs = outputs + sensor_outputs
 
+            # sparse attention mask loss
             if self.learn_mask_enabled:
                 loss_sparsity = self.get_loss_sparsity(video_attention)  
-                outputs = outputs + (loss_sparsity, )          
+                outputs = outputs + (loss_sparsity, )
+
             return outputs
-        
-        else:
-            sensor_outputs = self.sensor_pred_head(*args, **kwargs)        
-            return sensor_outputs
     
     def get_loss_sparsity(self, video_attention):
         sparsity_loss = 0

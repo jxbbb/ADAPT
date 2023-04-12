@@ -9,7 +9,7 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --per_gpu_eval_batch_size 24 \
         --num_train_epochs 40 \
         --learning_rate 0.0004 \
-        --max_num_frames 32 \
+        --max_num_frames 4 \
         --pretrained_2d 0 \
         --backbone_coef_lr 0.05 \
         --mask_prob 0.5 \
@@ -21,4 +21,4 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --learn_mask_enabled \
         --loss_sparse_w 0.5 \
         --use_sep_cap \
-        --output_dir ./output/base_lr0004_blr05_e40_32frame_gradstep1_6layer_6head
+        --output_dir ./output/base_without_multitask

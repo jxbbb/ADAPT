@@ -294,8 +294,9 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                 if args.evaluate_during_training:
                     logger.info(f"Perform evaluation at iteration {iteration}, global_step {global_step}")
                     evaluate_file = evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
-                    if args.multitask:
-                        signal_evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
+                    # # code should change when the types of control signal change, would be fixed soon
+                    # if args.multitask:
+                    #     signal_evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
                     if get_world_size() > 1:
                         dist.barrier()
 
@@ -699,7 +700,7 @@ def check_arguments(args):
         args.attn_mask_type = 'learn_vid_att'
 
 def update_existing_config_for_inference(args):
-    ''' load swinbert args for evaluation and inference 
+    ''' load adapt args for evaluation and inference 
     '''
     assert args.do_test or args.do_eval
     checkpoint = args.eval_model_dir
@@ -742,7 +743,7 @@ def get_custom_args(base_config):
     parser.add_argument('--loss_sensor_w', type=float, default=0)
     parser.add_argument('--sparse_mask_soft2hard', type=str_to_bool, nargs='?', const=True, default=False)
     parser.add_argument('--transfer_method', type=int, default=-1,
-                        help="0: load all SwinBERT pre-trained weights, 1: load only pre-trained sparse mask")
+                        help="0: load all ADAPT pre-trained weights, 1: load only pre-trained sparse mask")
     parser.add_argument('--att_mask_expansion', type=int, default=-1,
                         help="-1: random init, 0: random init and then diag-based copy, 1: interpolation")
     parser.add_argument('--resume_checkpoint', type=str, default='None')
@@ -754,13 +755,17 @@ def main(args):
     if args.do_train==False or args.do_eval==True:
         args = update_existing_config_for_inference(args) 
 
-    # global training_saver
     args.device = torch.device(args.device)
-    # Setup CUDA, GPU & distributed training
+
     dist_init(args)
+    logger.info("Setup CUDA, GPU & distributed training")
+    
     check_arguments(args)
+    logger.info("Check arguments")
+
     mkdir(args.output_dir)
     logger.info(f"creating output_dir at: {args.output_dir}")
+
     set_seed(args.seed, args.num_gpus)
     
     if args.mixed_precision_method == "apex":
@@ -792,11 +797,13 @@ def main(args):
     logger.info(f"Cuda version is: {torch.version.cuda}")
     logger.info(f"cuDNN version is : {torch.backends.cudnn.version()}" )
 
-    # Get Video Swin model 
+    # Get Video Swin backbone 
     swin_model = get_swin_model(args)
-    # Get BERT and tokenizer 
+
+    # Get BERT and tokenizer for DCG (Driving Caption Generation) 
     bert_model, config, tokenizer = get_bert_model(args)
-    # build SwinBERT based on training configs
+
+    # build ADAPT based on training configs
     if args.multitask:
         vl_transformer = MultitaskVideoTransformer(args, config, swin_model, bert_model)
     else:
@@ -834,7 +841,7 @@ def main(args):
             #-------------------------------------------------------------
             # transfer at the same frame rate
             if pretrained_mask_shape==init_mask_shape: 
-                # init using entire pre-trained SwinBERT weights
+                # init using entire pre-trained ADAPT weights
                 if args.transfer_method==0:
                     if isinstance(pretrained_model, dict):
                         vl_transformer.load_state_dict(pretrained_model, strict=False)
@@ -846,7 +853,7 @@ def main(args):
             #-------------------------------------------------------------
             # transfer across different frame rates
             else:  
-                # init using entire pre-trained SwinBERT weights, except sparse attn mask
+                # init using entire pre-trained ADAPT weights, except sparse attn mask
                 if args.transfer_method==0:
                     if isinstance(pretrained_model, dict):
                         new_state_dict={}
