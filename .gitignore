@@ -3,15 +3,9 @@ __pycache__
 _ext
 *.pyc
 *.so
-# maskrcnn_benchmark.egg-info/
 cpu_soft_nms.egg-info/
 build/
 dist/
-src/evalcap/coco_caption/
-src/evalcap/cider/
-src/evalcap/coco_caption
-src/evalcap/cider
-
 .vscode 
 
 # script
@@ -22,8 +16,6 @@ pt/
 .ptconfig
 .azureml
 .amltconfig
-
-
 
 # Project-related   #
 */*results*/
@@ -45,6 +37,12 @@ linjli
 ./models
 *.jsonl
 *.json
+/checkpoints/
+/output
+*.h5
+/expr/
+/expr*/
+
 
 # compiled files #
 *.pyc
@@ -83,22 +81,19 @@ ehthumbs.db
 Thumbs.db
 
 
-gittoken
-
-/expr/
-/expr*/
-*mov
-/demo/
-*.h5
+# visualization results
+/attn_visualize*/
 /quatitive_results/
-!src/configs/VidSwinBert/BDDX_two_default.json
-!src/configs/VidSwinBert/BDDX_multi_default.json
-/checkpoints/
-demo.py
+*mov
 /demo/*.png
 /demo/*.jpg
+
+# privacy
+gittoken
+*.back.py
+
+# files should be included
+!src/configs/VidSwinBert/BDDX_two_default.json
+!src/configs/VidSwinBert/BDDX_multi_default.json
 !/demo/
 !/demo/053da4e3-48ec49ba.mov
-
-/attn_visualize*/
-/output

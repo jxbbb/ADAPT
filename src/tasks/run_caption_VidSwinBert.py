@@ -294,9 +294,6 @@ def train(args, train_dataloader, val_dataloader, model, tokenizer, training_sav
                 if args.evaluate_during_training:
                     logger.info(f"Perform evaluation at iteration {iteration}, global_step {global_step}")
                     evaluate_file = evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
-                    # # code should change when the types of control signal change, would be fixed soon
-                    # if args.multitask:
-                    #     signal_evaluate(args, val_dataloader, model, tokenizer, checkpoint_dir)
                     if get_world_size() > 1:
                         dist.barrier()
 
