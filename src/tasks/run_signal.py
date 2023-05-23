@@ -217,37 +217,38 @@ def signal_evaluate(args, val_dataloader, model, tokenizer, output_dir):
         assert len(gt_signals) == len(pred_signals)
 
         gt_course = gt_signals[:, 0, :].cpu()
-        gt_speed = gt_signals[:, 1, :].cpu()
+        # gt_speed = gt_signals[:, 1, :].cpu()
         pred_course = pred_signals[:, :, 0].cpu()
-        pred_speed = pred_signals[:, :, 1].cpu()
-        from sklearn.metrics import mean_squared_error
+        # pred_speed = pred_signals[:, :, 1].cpu()
         import numpy as np
+        from sklearn.metrics import mean_squared_error
         rmse_course = np.sqrt(mean_squared_error(gt_course, pred_course))
-        rmse_speed = np.sqrt(mean_squared_error(gt_speed, pred_speed))
+        # rmse_speed = np.sqrt(mean_squared_error(gt_speed, pred_speed))
 
-        print(f"rmse \t course:{rmse_course} rmse_speed:{rmse_speed}")
+        # print(f"rmse \t course:{rmse_course} rmse_speed:{rmse_speed}")
+        print(f"rmse \t course:{rmse_course}")
         all_num = len(gt_course)*32
-        sig1_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_1)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_1)/all_num)
+        sig1_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_1)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_1)/all_num)
         print(f"sig1_acc \t {sig1_acc}")
-        sig2_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_2)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_2)/all_num)
+        sig2_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_2)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_2)/all_num)
         print(f"sig1_acc \t {sig2_acc}")
-        sig3_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_3)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_3)/all_num)
+        sig3_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_3)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_3)/all_num)
         print(f"sig1_acc \t {sig3_acc}")
-        sig4_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_4)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_4)/all_num)
+        sig4_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_4)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_4)/all_num)
         print(f"sig1_acc \t {sig4_acc}")
-        sig5_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_5)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_5)/all_num)
+        sig5_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_5)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_5)/all_num)
         print(f"sig1_acc \t {sig5_acc}")
         print(all_num)
         if not os.path.exists(op.dirname(predict_file)):
             os.makedirs(op.dirname(predict_file))
         with open(op.dirname(predict_file) +'\test_data.json', 'w') as json_file:
             json_file.write(str({"rmse_course":rmse_course,
-                    "rmse_speed":rmse_speed,
+                    # "rmse_speed":rmse_speed,
                     "sig1_acc":sig1_acc,
                     "sig2_acc":sig2_acc,
                     "sig3_acc":sig3_acc,
@@ -451,156 +452,6 @@ def get_predict_file(output_dir, args, data_yaml_file):
 def get_evaluate_file(predict_file):
     assert predict_file.endswith('.tsv')
     return op.splitext(predict_file)[0] + '.eval.json'
-
-def evaluate(args, val_dataloader, model, tokenizer, output_dir):
-    predict_file = get_predict_file(output_dir, args,
-            val_dataloader.dataset.yaml_file)
-    test(args, val_dataloader, model, tokenizer, predict_file)
-
-    if get_world_size() > 1:
-        dist.barrier()
-    evaluate_file = get_evaluate_file(predict_file)
-    if is_main_process():
-        caption_file = val_dataloader.dataset.get_caption_file_in_coco_format()
-        data = val_dataloader.dataset.yaml_file.split('/')[-2]
-        if args.use_sep_cap:
-            result = two_cap_evaluate_on_coco_caption(predict_file, caption_file, outfile=evaluate_file)
-        else:
-            result = evaluate_on_coco_caption(predict_file, caption_file, outfile=evaluate_file)
-        logger.info(f'evaluation result: {str(result)}')
-        logger.info(f'evaluation result saved to {evaluate_file}')
-    if get_world_size() > 1:
-        dist.barrier()
-    return evaluate_file
-
-def test(args, test_dataloader, model, tokenizer, predict_file):
-
-    cls_token_id, sep_token_id, pad_token_id, mask_token_id, period_token_id = \
-        tokenizer.convert_tokens_to_ids([tokenizer.cls_token, tokenizer.sep_token,
-        tokenizer.pad_token, tokenizer.mask_token, '.'])
-    world_size = get_world_size()
-    if world_size == 1:
-        cache_file = predict_file
-    else:
-        # local_rank would not work for cross-node distributed training
-        cache_file = op.splitext(predict_file)[0] + '_{}_{}'.format(get_rank(),
-                world_size) + op.splitext(predict_file)[1]
-
-    model.eval()
-    def gen_rows():
-        time_meter = 0
-        # restore existing results for long running inference tasks
-        exist_key2pred = {}
-        tmp_file = cache_file + '.tmp.copy'
-        if op.isfile(tmp_file):
-            with open(tmp_file, 'r') as fp:
-                for line in fp:
-                    parts = line.strip().split('\t')
-                    if len(parts) == 2:
-                        exist_key2pred[parts[0]] = parts[1]
-
-        with torch.no_grad():
-            for step, (img_keys, batch, meta_data) in tqdm(enumerate(test_dataloader)):
-                # torch.cuda.empty_cache()
-                # is_exist = True
-                # for k in img_keys:
-                #     if k not in exist_key2pred:
-                #         is_exist = False
-                #         break
-                # if is_exist:
-                #     for k in img_keys:
-                #         yield k, exist_key2pred[k]
-                #         # return k, exist_key2pred[k]
-                #     continue
-                # if step > 4:
-                #     break
-                batch = tuple(t.to(args.device) for t in batch)
-                inputs = {'is_decode': True,
-                    'input_ids': batch[0], 'attention_mask': batch[1],
-                    'token_type_ids': batch[2], 'img_feats': batch[3],
-                    'masked_pos': batch[4],
-                    'car_info': batch[5],
-                    'do_sample': False,
-                    'bos_token_id': cls_token_id,
-                    'pad_token_id': pad_token_id,
-                    'eos_token_ids': [sep_token_id],
-                    'mask_token_id': mask_token_id,
-                    # for adding od labels
-                    'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
-                    # hyperparameters of beam search
-                    'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
-                    'use_sep_cap': args.use_sep_cap,
-                    'num_beams': args.num_beams,
-                    "temperature": args.temperature,
-                    "top_k": args.top_k,
-                    "top_p": args.top_p,
-                    "repetition_penalty": args.repetition_penalty,
-                    "length_penalty": args.length_penalty,
-                    "num_return_sequences": args.num_return_sequences,
-                    "num_keep_best": args.num_keep_best,
-                }
-
-                tic = time.time()
-                # captions, logprobs
-                
-                if args.deepspeed_fp16:
-                    # deepspeed does not auto cast inputs.
-                    inputs = fp32_to_fp16(inputs)
-
-                if args.mixed_precision_method == "fairscale":
-                    with torch.cuda.amp.autocast(enabled=True):
-                        outputs = model(**inputs)
-                else:
-                    outputs = model(**inputs)
-                time_meter += time.time() - tic
-                all_caps = outputs[0]  # batch_size * num_keep_best * max_len
-                all_confs = torch.exp(outputs[1])
-
-                if not args.use_sep_cap:
-                    for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
-                        res = []
-                        for cap, conf in zip(caps, confs):
-                            cap = tokenizer.decode(cap.tolist(), skip_special_tokens=True)
-                            res.append({'caption': cap, 'conf': conf.item()})
-                        if isinstance(img_key, torch.Tensor):
-                            img_key = img_key.item()
-                        yield img_key, json.dumps(res)
-                        # return img_key, json.dumps(res)
-                else:
-                    for img_key, caps, confs in zip(img_keys, all_caps, all_confs):
-                        all_cap_a = []
-                        all_cap_b = []
-                        sep_place = args.max_gen_length
-                        for cap, conf in zip(caps, confs):
-                            cap_1 = tokenizer.decode(cap.tolist()[:sep_place], skip_special_tokens=True)
-                            cap_2 = tokenizer.decode(cap.tolist()[sep_place:], skip_special_tokens=True)
-                            all_cap_a.append({'caption': cap_1, 'conf': conf.item()})
-                            all_cap_b.append({'caption': cap_2, 'conf': conf.item()})
-                        if isinstance(img_key, torch.Tensor):
-                            img_key = img_key.item()
-                        if args.use_swap_cap:
-                            yield img_key, json.dumps(all_cap_b), json.dumps(all_cap_a)
-                        else:
-                            yield img_key, json.dumps(all_cap_a), json.dumps(all_cap_b)
-                        # return img_key, json.dumps(all_cap_a), json.dumps(all_cap_b)
-
-        logger.info(f"Inference model computing time: {(time_meter / (step+1))} seconds per batch")
-
-    # a = gen_rows()
-    if args.use_sep_cap:
-        double_tsv_writer(gen_rows(), cache_file)
-    else:
-        tsv_writer(gen_rows(), cache_file)
-    if world_size > 1:
-        dist.barrier()
-    if world_size > 1 and is_main_process():
-        cache_files = [op.splitext(predict_file)[0] + '_{}_{}'.format(i, world_size) + \
-            op.splitext(predict_file)[1] for i in range(world_size)]
-        concat_tsv_files(cache_files, predict_file)
-        delete_tsv_files(cache_files)
-        reorder_tsv_keys(predict_file, test_dataloader.dataset.image_keys, predict_file)
-    if world_size > 1:
-        dist.barrier()
 
 def check_arguments(args):
     # shared basic checks
@@ -827,7 +678,7 @@ def main(args):
     elif args.do_eval:
         val_dataloader = make_data_loader(args, args.val_yaml, tokenizer, args.distributed, is_train=False)
         args, vl_transformer, _, _ = mixed_precision_init(args, vl_transformer)
-        evaluate_file = evaluate(args, val_dataloader, vl_transformer, tokenizer, args.eval_model_dir)
+        signal_evaluate(args, val_dataloader, vl_transformer, tokenizer, args.eval_model_dir)
     
     if args.distributed:
         dist.destroy_process_group()

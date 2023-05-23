@@ -633,37 +633,38 @@ def signal_evaluate(args, val_dataloader, model, tokenizer, output_dir):
         assert len(gt_signals) == len(pred_signals)
 
         gt_course = gt_signals[:, 0, :].cpu()
-        gt_speed = gt_signals[:, 1, :].cpu()
+        # gt_speed = gt_signals[:, 1, :].cpu()
         pred_course = pred_signals[:, :, 0].cpu()
-        pred_speed = pred_signals[:, :, 1].cpu()
-        from sklearn.metrics import mean_squared_error
+        # pred_speed = pred_signals[:, :, 1].cpu()
         import numpy as np
+        from sklearn.metrics import mean_squared_error
         rmse_course = np.sqrt(mean_squared_error(gt_course, pred_course))
-        rmse_speed = np.sqrt(mean_squared_error(gt_speed, pred_speed))
+        # rmse_speed = np.sqrt(mean_squared_error(gt_speed, pred_speed))
 
-        print(f"rmse \t course:{rmse_course} rmse_speed:{rmse_speed}")
+        # print(f"rmse \t course:{rmse_course} rmse_speed:{rmse_speed}")
+        print(f"rmse \t course:{rmse_course}")
         all_num = len(gt_course)*32
-        sig1_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_1)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_1)/all_num)
+        sig1_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_1)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_1)/all_num)
         print(f"sig1_acc \t {sig1_acc}")
-        sig2_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_2)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_2)/all_num)
+        sig2_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_2)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_2)/all_num)
         print(f"sig1_acc \t {sig2_acc}")
-        sig3_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_3)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_3)/all_num)
+        sig3_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_3)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_3)/all_num)
         print(f"sig1_acc \t {sig3_acc}")
-        sig4_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_4)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_4)/all_num)
+        sig4_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_4)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_4)/all_num)
         print(f"sig1_acc \t {sig4_acc}")
-        sig5_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_5)/all_num,
-                    np.count_nonzero(abs(gt_speed-pred_speed)<sigma_5)/all_num)
+        sig5_acc = (np.count_nonzero(abs(gt_course-pred_course)<sigma_5)/all_num,)
+                    # np.count_nonzero(abs(gt_speed-pred_speed)<sigma_5)/all_num)
         print(f"sig1_acc \t {sig5_acc}")
         print(all_num)
         if not os.path.exists(op.dirname(predict_file)):
             os.makedirs(op.dirname(predict_file))
-        with open(op.join(op.dirname(predict_file), 'test_data.json'), 'w') as json_file:
+        with open(op.dirname(predict_file) +'\test_data.json', 'w') as json_file:
             json_file.write(str({"rmse_course":rmse_course,
-                    "rmse_speed":rmse_speed,
+                    # "rmse_speed":rmse_speed,
                     "sig1_acc":sig1_acc,
                     "sig2_acc":sig2_acc,
                     "sig3_acc":sig3_acc,
