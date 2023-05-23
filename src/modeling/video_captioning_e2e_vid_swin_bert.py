@@ -37,6 +37,13 @@ class VideoTransformer(torch.nn.Module):
             self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, *args, **kwargs):
+
+        # grad cam can only input a tuple (args, kwargs)
+        if isinstance(args, tuple):
+            kwargs = args[0]
+            args= ()
+
+
         images = kwargs['img_feats']
         B, S, C, H, W = images.shape  # batch, segment, chanel, hight, width
         # (B x S x C x H x W) --> (B x C x S x H x W)

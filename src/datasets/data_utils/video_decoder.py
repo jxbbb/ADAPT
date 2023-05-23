@@ -343,12 +343,16 @@ def decode(
     frames = temporal_sampling(frames, start_idx, end_idx, num_frames)
     frames = [frame.to_rgb().to_ndarray() for frame in frames]
 
-    if container.streams.video[0].metadata.get('rotate') is not None:
-        rorate = 360 - int(container.streams.video[0].metadata.get('rotate'))
-        begin_time = time.time()
-        for i in range(rorate//90):
-            frames = [np.rot90(frame) for frame in frames]
-        rotate_time = time.time() - begin_time
-        print(f"rorate time {rotate_time}")
+    """
+    av package sometimes get wrong when the machine is changed, so remove it there
+    later the whole av would be replaced by ffmpeg
+    """
+    # if container.streams.video[0].metadata.get('rotate') is not None:
+    #     rotate = 360 - int(container.streams.video[0].metadata.get('rotate'))
+    #     begin_time = time.time()
+    #     for i in range(rotate//90):
+    #         frames = [np.rot90(frame) for frame in frames]
+    #     rotate_time = time.time() - begin_time
+    #     print(f"rotate time {rotate_time}")
     frames = torch.as_tensor(np.stack(frames))
     return frames, video_max_pts

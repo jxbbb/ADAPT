@@ -73,7 +73,7 @@ Then install other dependency:
 pip install -r requirements.txt
 ```
 
-### 2. Launch Docker Container
+### 2. Launch Docker Container (Recommended)
 
 <!-- ### Launch Docker Container -->
 

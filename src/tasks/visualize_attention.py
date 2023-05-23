@@ -33,17 +33,32 @@ from PIL import Image
 import numpy as np
 # import pyttsx3
 
+import cv2
+# grad cam
+from src.pytorch_grad_cam.grad_cam import GradCAM
+from src.pytorch_grad_cam.utils.image import show_cam_on_image, \
+    preprocess_image
+import ffmpeg
+
 def _online_video_decode(args, video_path):
     decoder_num_frames = getattr(args, 'max_num_frames', 2)
     frames, _ = extract_frames_from_video_path(
                 video_path, target_fps=3, num_frames=decoder_num_frames,
                 multi_thread_decode=False, sampling_strategy="uniform",
-                safeguard_duration=False, start=0, end=5)
+                safeguard_duration=False, start=3, end=10)
 
-    for i in range(frames.shape[0]):
-        frame = frames[i]
-        print(f"save images at demo/{i}.png")
-        Image.fromarray(np.array(frame.permute(1,2,0))).save(f"/videocap/demo/{i}.png")
+    rotate = ffmpeg.probe(video_path)['streams'][0]['tags']['rotate']
+    rotate = int(rotate)
+    if rotate != 0:
+        print(f"Video is rotated, rotating...")
+        new_frames = []
+        for i in range(frames.shape[0]):
+            frame = frames[i].permute(1,2,0).numpy()
+            for _ in range((360-rotate)//90):
+                frame = np.rot90(frame)
+            new_frames.append(frame)
+        print(f"Rotating done...")
+        return torch.tensor(new_frames).permute(0, 3, 1, 2)
     return frames
 
 def _transforms(args, frames):
@@ -52,7 +67,7 @@ def _transforms(args, frames):
         CenterCrop((args.img_res,args.img_res)),
         ClipToTensor(channel_nb=3),
         Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
-    ]            
+    ]
     raw_video_prcoess = Compose(raw_video_crop_list)
 
     frames = frames.numpy()
@@ -69,57 +84,124 @@ def _transforms(args, frames):
     crop_frames = crop_frames.permute(1, 0, 2, 3)
     return crop_frames 
 
-def inference(args, video_path, model, tokenizer, tensorizer):
+def reshape_transform(tensor, frame=16, height=7, width=7):
+    result = tensor.reshape(tensor.size(0), frame,
+                            height, width, tensor.size(-1))
+
+    # Bring the channels to the first dimension,
+    # like in CNNs.
+    result = result.permute(0, 4, 1, 2, 3)
+    return result
+
+def visualize_attn(args, video_path, model, tokenizer, tensorizer):
     cls_token_id, sep_token_id, pad_token_id, mask_token_id, period_token_id = \
         tokenizer.convert_tokens_to_ids([tokenizer.cls_token, tokenizer.sep_token,
         tokenizer.pad_token, tokenizer.mask_token, '.'])
 
     model.float()
     model.eval()
+
     frames = _online_video_decode(args, video_path)
     preproc_frames = _transforms(args, frames)
-    data_sample = tensorizer.tensorize_example_e2e('', preproc_frames, text_b='')
+    data_sample = tensorizer.tensorize_example_e2e("", preproc_frames, text_b="")
     data_sample = tuple(t.to(args.device) for t in data_sample)
-    with torch.no_grad():
 
-        inputs = {'is_decode': True,
+
+    cam = GradCAM(model=model,
+                  target_layers=[model.swin.backbone.norm],
+                  use_cuda=True,
+                  reshape_transform=reshape_transform
+                )
+
+    cur_len = 1
+    sentence_id = 0
+    while cur_len <= args.max_seq_length:
+
+
+        masked_pos = torch.zeros_like(data_sample[0][None,:])
+        masked_pos[:, cur_len] = 1
+
+        inputs = {
             'input_ids': data_sample[0][None,:], 'attention_mask': data_sample[1][None,:],
             'token_type_ids': data_sample[2][None,:], 'img_feats': data_sample[3][None,:],
-            'masked_pos': data_sample[4][None,:],
-            'do_sample': False,
-            'bos_token_id': cls_token_id,
-            'pad_token_id': pad_token_id,
-            'eos_token_ids': [sep_token_id],
-            'mask_token_id': mask_token_id,
-            # for adding od labels
-            'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
-            # hyperparameters of beam search
-            'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
-            'use_sep_cap': args.use_sep_cap,
-            'num_beams': args.num_beams,
-            "temperature": args.temperature,
-            "top_k": args.top_k,
-            "top_p": args.top_p,
-            "repetition_penalty": args.repetition_penalty,
-            "length_penalty": args.length_penalty,
-            "num_return_sequences": args.num_return_sequences,
-            "num_keep_best": args.num_keep_best,
+            'masked_pos': masked_pos,
+            'masked_ids': torch.zeros((1), dtype=torch.int64),   # targets in grad cam, don't know before feeding the data, set it zero
         }
+        # inputs = {'is_decode': True,
+        #     'input_ids': data_sample[0][None,:], 'attention_mask': data_sample[1][None,:],
+        #     'token_type_ids': data_sample[2][None,:], 'img_feats': data_sample[3][None,:],
+        #     'masked_pos': data_sample[4][None,:],
+        #     'do_sample': False,
+        #     'bos_token_id': cls_token_id,
+        #     'pad_token_id': pad_token_id,
+        #     'eos_token_ids': [sep_token_id],
+        #     'mask_token_id': mask_token_id,
+        #     # for adding od labels
+        #     'add_od_labels': args.add_od_labels, 'od_labels_start_posid': args.max_seq_a_length,
+        #     # hyperparameters of beam search
+        #     'max_length': args.max_gen_length if not args.use_sep_cap else args.max_gen_length*2,
+        #     'use_sep_cap': args.use_sep_cap,
+        #     'num_beams': args.num_beams,
+        #     "temperature": args.temperature,
+        #     "top_k": args.top_k,
+        #     "top_p": args.top_p,
+        #     "repetition_penalty": args.repetition_penalty,
+        #     "length_penalty": args.length_penalty,
+        #     "num_return_sequences": args.num_return_sequences,
+        #     "num_keep_best": args.num_keep_best,
+        # }
         tic = time.time()
-        outputs = model(**inputs)
+
+        grayscale_cam = cam(input_tensor=inputs,
+                        targets=None,
+                        eigen_smooth=False,
+                        aug_smooth=False)
 
         time_meter = time.time() - tic
-        all_caps = outputs[0]  # batch_size * num_keep_best * max_len
-        all_confs = torch.exp(outputs[1])
+        print(time_meter)
 
-        for caps, confs in zip(all_caps, all_confs):
-            for cap, conf in zip(caps, confs):
-                cap = tokenizer.decode(cap.tolist(), skip_special_tokens=True)
-                logger.info(f"Prediction: {cap}")
-                logger.info(f"Conf: {conf.item()}")
-                logger.info("Note that this is prediction of the first five seconds(0-5s) of the video, you can change the time in src/tasks/run_caption_VidSwinBert_inference.py")              
+        # Here grayscale_cam has only one video in the batch
+        grayscale_cam = grayscale_cam[0, :]
 
-    logger.info(f"Inference model computing time: {time_meter} seconds")
+        cropped_raw_frames = CenterCrop((720,720))([frame.permute(1,2,0).numpy() for frame in frames])
+
+        save_path = "grad_cam_vis_1"
+        os.makedirs(save_path, exist_ok=True)
+
+        output_word = cam.output_word.item()
+
+        for i in range(len(grayscale_cam)):
+            cam_img = grayscale_cam[i]
+            cam_img = cv2.resize(cam_img, (720, 720))
+            frame_id = 2*i+1
+            raw_img = cropped_raw_frames[frame_id][:, :, ::-1] / 255
+
+            cam_image = show_cam_on_image(raw_img, cam_img)
+            cv2.imwrite(os.path.join(save_path, tokenizer.convert_ids_to_tokens(output_word)+str(i).zfill(3)+".jpg"), cam_image)
+
+
+        if sentence_id == 0:
+            if output_word == 102:
+                sentence_id += 1
+                data_sample[0][cur_len] = output_word
+                cur_len += 1
+                while cur_len < args.max_seq_a_length:
+                    data_sample[0][cur_len] = 0
+                    cur_len += 1
+                data_sample[0][cur_len] = 101
+                cur_len += 1
+            else:
+                data_sample[0][cur_len] = output_word
+                cur_len += 1
+        else:
+            if output_word == 102:
+                break
+            else:
+                data_sample[0][cur_len] = output_word
+                cur_len += 1
+
+    print(data_sample[0])
+    print(tokenizer.convert_ids_to_tokens(data_sample[0].tolist()))
 
 def check_arguments(args):
     # shared basic checks
@@ -242,7 +324,7 @@ def main(args):
     vl_transformer.eval()
 
     tensorizer = build_tensorizer(args, tokenizer, is_train=False)
-    inference(args, args.test_video_fname, vl_transformer, tokenizer, tensorizer)
+    visualize_attn(args, args.test_video_fname, vl_transformer, tokenizer, tensorizer)
 
 if __name__ == "__main__":
     shared_configs.shared_video_captioning_config(cbs=True, scst=True)

@@ -23,6 +23,7 @@ pt/
 tmp*/
 cache/*
 */cache*/
+/src/evalcap/coco_caption/pycocoevalcap/spice/cache/
 tmp*.py
 *pickle
 *output*/
@@ -59,6 +60,7 @@ linjli
 *.rar
 *.tar
 *.zip
+*.mdb
 
 # Logs and databases #
 ######################
@@ -97,3 +99,5 @@ gittoken
 !src/configs/VidSwinBert/BDDX_multi_default.json
 !/demo/
 !/demo/053da4e3-48ec49ba.mov
+
+/grad_cam_vis*/
