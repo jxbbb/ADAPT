@@ -1,7 +1,7 @@
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
 NCCL_P2P_DISABLE=1 \
 OMPI_COMM_WORLD_SIZE="4" \
-python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 --master_port=45678 src/tasks/run_caption_VidSwinBert.py \
+python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 --master_port=45678 src/tasks/run_adapt.py \
         --config src/configs/VidSwinBert/BDDX_multi_default.json \
         --train_yaml BDDX/training_32frames.yaml \
         --val_yaml BDDX/testing_32frames.yaml \
@@ -24,4 +24,4 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 -
         --multitask \
         --loss_sensor_w 0.05 \
         --max_grad_norm 1 \
-        --output_dir ./expr/multitask/sensor_course_speed
+        --output_dir ./output/multitask/sensor_course_speed

@@ -45,7 +45,7 @@ class MultitaskVideoTransformer(torch.nn.Module):
             self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, *args, **kwargs):
-        """ The forward process of ADAPT, 
+        """ The forward process of ADAPT, 
         Parameters:
             input_ids: word tokens of input sentences tokenized by tokenizer
             attention_mask: multimodal attention mask in Vision-Language transformer
@@ -56,6 +56,11 @@ class MultitaskVideoTransformer(torch.nn.Module):
             masked_ids: groung truth of [MASK] when performing MLM
             car_info: control signals of ego car in the video
         """
+
+        # grad cam can only input a tuple (args, kwargs)
+        if isinstance(args, tuple) and len(args) != 0:
+            kwargs = args[0]
+            args= ()
 
         # video swin to extract video features
         images = kwargs['img_feats']
@@ -68,10 +73,14 @@ class MultitaskVideoTransformer(torch.nn.Module):
         if self.use_grid_feat==True:
             vid_feats = vid_feats.permute(0, 2, 3, 4, 1)
         vid_feats = vid_feats.view(B, -1, self.latent_feat_size)
+
+        # use an mlp to transform video token dimension
         vid_feats = self.fc(vid_feats)
 
         # prepare VL transformer inputs
         kwargs['img_feats'] = vid_feats
+
+        # disable bert attention outputs to avoid some bugs
         if self.trans_encoder.bert.encoder.output_attentions:
             self.trans_encoder.bert.encoder.set_output_attentions(False)
         
@@ -102,7 +111,6 @@ class MultitaskVideoTransformer(torch.nn.Module):
             # Control Signal Prediction head, output is ()
             sensor_outputs = self.sensor_pred_head(*args, **kwargs)
 
-            # concat two outputs
             outputs = outputs + sensor_outputs
 
             # sparse attention mask loss
@@ -116,42 +124,6 @@ class MultitaskVideoTransformer(torch.nn.Module):
         sparsity_loss = 0
         sparsity_loss += (torch.mean(torch.abs(video_attention)))
         return sparsity_loss
-
-    def diag_based_init_attn_mask(self, pretrain_attn_mask):
-        import numpy
-        pretrained_num_tokens = int(numpy.sqrt(pretrain_attn_mask.shape[0]))
-
-        pretrained_learn_att = pretrain_attn_mask.reshape(
-                                pretrained_num_tokens,pretrained_num_tokens)
-        zeros_mask = torch.zeros_like(pretrained_learn_att)
-        scale_factor = self.max_img_seq_length/pretrained_num_tokens
-        
-        vid_att_len = self.max_img_seq_length
-        learn_att = self.learn_vid_att.weight.reshape(vid_att_len,vid_att_len)
-        with torch.no_grad():
-            for i in range(int(scale_factor)):
-                learn_att[pretrained_num_tokens*i:pretrained_num_tokens*(i+1), 
-                            pretrained_num_tokens*i:pretrained_num_tokens*(i+1)] = pretrained_learn_att 
-
-
-    def bilinear_init_attn_mask(self, pretrain_attn_mask):
-        print('init attn mask with bilinear interpolation')
-        import numpy
-        pretrained_num_tokens = int(numpy.sqrt(pretrain_attn_mask.shape[0]))
-
-        pretrained_learn_att = pretrain_attn_mask.reshape(
-                                pretrained_num_tokens,pretrained_num_tokens)
-        vid_att_len = self.max_img_seq_length
-        learn_att = self.learn_vid_att.weight.reshape(vid_att_len,vid_att_len)
-        scale_factor = int(self.max_img_seq_length/pretrained_num_tokens)
-        sampler = torch.nn.Upsample(scale_factor=scale_factor, mode='bilinear')
-        with torch.no_grad():
-            learn_att = sampler(pretrained_learn_att[None,None,:,:].double())[0,0,:,:].half()
-
-    def random_init_attn_mask(self):
-        print('random init attn mask')
-        self.learn_vid_att = torch.nn.Embedding(self.max_img_seq_length*self.max_img_seq_length,1)
-
 
     def reload_attn_mask(self, pretrain_attn_mask): 
         import numpy

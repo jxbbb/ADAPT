@@ -23,4 +23,4 @@ python src/tasks/run_signal.py \
         --only_signal \
         --loss_sensor_w 0.003 \
         --max_grad_norm 1 \
-        --output_dir ./expr1/only_signal
+        --output_dir ./output/only_signal

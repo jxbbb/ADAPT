@@ -31,8 +31,9 @@ from src.utils.miscellaneous import (NoOp, mkdir, set_seed, str_to_bool,
 from src.utils.metric_logger import MetricLogger
 from src.utils.tsv_file_ops import tsv_writer, double_tsv_writer, reorder_tsv_keys
 from src.utils.deepspeed import get_deepspeed_config, fp32_to_fp16
-from src.modeling.video_captioning_e2e_vid_swin_bert import VideoTransformer
-from src.modeling.multitask_e2e_vid_swin_bert import MultitaskVideoTransformer
+# from src.modeling.video_captioning_e2e_vid_swin_bert import VideoTransformer
+# from src.modeling.multitask_e2e_vid_swin_bert import MultitaskVideoTransformer
+from src.modeling.signal_predicting import SignalVideoTransformer
 from src.modeling.load_swin import get_swin_model, reload_pretrained_swin
 from src.modeling.load_bert import get_bert_model
 from src.solver import AdamW, WarmupLinearLR
@@ -719,10 +720,10 @@ def main(args):
     # Get BERT and tokenizer 
     bert_model, config, tokenizer = get_bert_model(args)
     # build SwinBERT based on training configs
-    if args.multitask:
-        vl_transformer = MultitaskVideoTransformer(args, config, swin_model, bert_model)
+    if args.only_signal:
+        vl_transformer = SignalVideoTransformer(args, config, swin_model, bert_model)
     else:
-        vl_transformer = VideoTransformer(args, config, swin_model, bert_model)
+        raise Exception("Model not implemented.")
     vl_transformer.freeze_backbone(freeze=args.freeze_backbone)
 
     if args.do_eval:
