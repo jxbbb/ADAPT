@@ -23,7 +23,7 @@ pt/
 tmp*/
 cache/*
 */cache*/
-/src/evalcap/coco_caption/pycocoevalcap/spice/cache/
+src/evalcap/coco_caption/pycocoevalcap/spice/cache/lock.mdb
 tmp*.py
 *pickle
 *output*/

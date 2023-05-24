@@ -21,6 +21,7 @@ python src/tasks/run_signal.py \
         --use_sep_cap \
         --multitask \
         --only_signal \
+        --signal_types course speed \
         --loss_sensor_w 0.003 \
         --max_grad_norm 1 \
         --output_dir ./output/only_signal

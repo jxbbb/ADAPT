@@ -93,6 +93,11 @@ class VisionLanguageTSVDataset(object):
         self.multitask = getattr(args, 'multitask', False)
         self.only_signal = getattr(args, 'only_signal', False)
 
+        self.signal_types = getattr(args, 'signal_types', ['course', 'speed'])
+
+        if self.multitask or self.only_signal:
+            assert len(self.signal_types) != 0
+
         LOGGER.info(f'Use_asr: {self.use_asr}')
         # use uniform sampling as default for now
         self.decoder_sampling_strategy = getattr(args, 'decoder_sampling_strategy', 'uniform')
@@ -341,9 +346,9 @@ class VisionLanguageTSVDataset(object):
             step = (end-start)/float(n-1)
             return [int(round(start+x*step)) for x in range(n)]
 
-        sensor_type_num = 1
+        sensor_type_num = len(self.signal_types)
         # all_choices = ['course', 'curvature', 'accelerator', 'speed']
-        all_choices = ['course']
+        all_choices = self.signal_types
         infos = []
         info_path = op.join(self.root, "processed_video_info", img_key+".h5")
         if not op.exists(info_path):
