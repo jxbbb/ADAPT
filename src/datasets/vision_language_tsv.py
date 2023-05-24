@@ -352,7 +352,10 @@ class VisionLanguageTSVDataset(object):
         infos = []
         info_path = op.join(self.root, "processed_video_info", img_key+".h5")
         if not op.exists(info_path):
-            return torch.zeros((sensor_type_num, self.decoder_num_frames))
+            # only happens when testing
+            # print(f"Not existed {info_path}")
+            return -1*torch.ones((sensor_type_num, self.decoder_num_frames))
+        # print(f"Loading {info_path}")
         all_infos = h5py.File(info_path)
 
         info_meta_data = torch.zeros((sensor_type_num, self.decoder_num_frames))

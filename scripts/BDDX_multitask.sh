@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=4,5,6,7 \
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
 NCCL_P2P_DISABLE=1 \
 OMPI_COMM_WORLD_SIZE="4" \
 python -m torch.distributed.launch --nproc_per_node=4 --nnodes=1 --node_rank=0 --master_port=45978 src/tasks/run_adapt.py \

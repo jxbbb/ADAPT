@@ -607,7 +607,9 @@ def signal_evaluate(args, val_dataloader, model, tokenizer, output_dir):
                     outputs = model(**inputs)
                 outputs = outputs
                 for b in range(len(batch[0])):
-                    if not (batch[5][b]==0).all():
+                    # if all of the control signal is -1, then we know the info file is missed
+                    # however, this missed info doesn't affect the results of captions due to our multi-task architecture
+                    if not (batch[5][b]==-1).all():
                         gt_signals.append(batch[5][b])
                         pred_signals.append(outputs[-2][b])
 
