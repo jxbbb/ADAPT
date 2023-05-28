@@ -106,8 +106,9 @@ We provide a [Docker image](https://hub.docker.com/r/jxbbb/adapt/tags) for easie
 
 We only support Linux with NVIDIA GPUs. We test on Ubuntu 18.04 and V100 cards.
 We use mixed-precision training hence GPUs with Tensor Cores are recommended.
-Our scripts require the user to have the [docker group membership](https://docs.docker.com/install/linux/linux-postinstall/)
-so that docker commands can be run without sudo.
+Our scripts require the user to have the [docker group membership](https://docs.docker.com/install/linux/linux-postinstall/) so that docker commands can be run without sudo.
+
+Then download codes and files for caption evaluation in [Google Drive](https://drive.google.com/drive/folders/1LLoEyIZ2BZzTP_h93z93QAhO0Hq5_K9r?usp=share_link) and put it under `src/evalcap`
 
 ## Dataset Preparation
 
