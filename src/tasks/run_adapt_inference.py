@@ -43,7 +43,7 @@ def _online_video_decode(args, video_path):
     for i in range(frames.shape[0]):
         frame = frames[i]
         print(f"save images at demo/{i}.png")
-        Image.fromarray(np.array(frame.permute(1,2,0))).save(f"/videocap/demo/{i}.png")
+        # Image.fromarray(np.array(frame.permute(1,2,0))).save(f"demo/{i}.png")
     return frames
 
 def _transforms(args, frames):

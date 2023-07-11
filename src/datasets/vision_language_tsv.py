@@ -174,6 +174,13 @@ class VisionLanguageTSVDataset(object):
         else:
             # print(row[0], self.image_keys[img_idx])
             assert row[0].split('/')[0] == self.image_keys[img_idx].split('_')[-1] or row[0].split('_')[-1] == self.image_keys[img_idx].split('_')[-1]
+            # print(row)
+            # print()
+            # print(row[0].split('/')[0])
+            # print(row[0].split('_')[-1])
+            # print(self.image_keys[img_idx].split('_')[-1])
+            # from IPython import embed
+            # embed()
         return row
 
     def get_caption(self, img_idx, cap_idx):
