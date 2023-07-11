@@ -51,7 +51,7 @@ This reposity will be updated soon, including:
 
 Create conda environment:
 ```
-conda env create --name ADAPT python=3.8
+conda create --name ADAPT python=3.8
 ```
 
 Install torch:
