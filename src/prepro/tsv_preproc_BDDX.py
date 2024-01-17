@@ -13,7 +13,10 @@ from src.utils.tsv_file_ops import tsv_writer
 from src.utils.tsv_file_ops import generate_linelist_file
 from collections import defaultdict
 
-# data path to raw video files
+
+# !!! please follow the readme to organize the output of the previous script 
+
+# # FIXME: data path to raw video files
 data_vid_id = "/data/hdd01/jinbu/BDDX/BDD-V/Videos/videos//{}"
 dataset_path = './datasets/BDDX/'
 # annotations downloaded from official downstream dataset
