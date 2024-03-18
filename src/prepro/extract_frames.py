@@ -4,6 +4,7 @@ from tqdm import tqdm
 import multiprocessing as mp
 import subprocess
 import datetime
+import  json
 
 def get_video_duration(video_file):
     result = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
@@ -35,9 +36,37 @@ def extract_frame_from_video(video_path, save_frame_path, fps=1, num_frames=-1,
     extra_args = " -hide_banner -loglevel panic " if suppress_msg else ""
     extra_args += " -y " if overwrite else ""
     if start_ts != -1 and end_ts != -1:
+        
+        dur_to_use = get_video_duration(video_path)
+        if end_ts > dur_to_use:
+            if start_ts > dur_to_use:
+                print("start_ts > dur_to_use")
+                exit()
+            else:
+                end_ts = int(dur_to_use)
+        if int(end_ts - start_ts) == 0:
+            if start_ts < 2:
+                end_ts += 2
+            elif dur_to_use-end_ts < 2:
+                start_ts -= 2
+            else:
+                start_ts -= 1
+                end_ts   += 1
+        elif int(end_ts - start_ts) == 1:
+            if start_ts < 2:
+                end_ts   += 1
+            else:
+                start_ts -= 1
+        else:
+            pass
+
         start_ts_str = str(datetime.timedelta(seconds=start_ts))
         end_ts_str = str(datetime.timedelta(seconds=end_ts))
         duration = str(datetime.timedelta(seconds=(end_ts - start_ts)))
+        
+
+            
+        
         # print(start_ts, end_ts, duration)
         extra_args += f"-ss {start_ts_str} -t {duration} "
     # extra_args2 = " -vf scale=720:-2 "
@@ -58,6 +87,7 @@ def extract_frame_from_video(video_path, save_frame_path, fps=1, num_frames=-1,
             duration = 10
             print(video_path)
         frame_rate = num_frames/duration
+
         # if not suppress_msg:
         #     print(duration, frame_rate, num_frames)
         output_exists = True
@@ -65,7 +95,8 @@ def extract_frame_from_video(video_path, save_frame_path, fps=1, num_frames=-1,
             if not os.path.exists(f"{save_frame_path}{(frame_idx+1):04d}.jpg"):
                 print(f"{save_frame_path}{(frame_idx+1):04d}.jpg does not exist")
                 output_exists = False
-                save_frame_path = save_frame_path.replace(f"{num_frames}frames_test_value", f"{num_frames}frames_test_value_debug")
+                # save_frame_path = save_frame_path.replace(f"{num_frames}frames", f"{num_frames}frames_debug")
+
                 break
         if output_exists:
             return
@@ -87,22 +118,21 @@ COMMON_VIDEO_ETX = set([
     ".mov", ".flv", ".swf"])
 
 
-def extract_frame(video_file_path, save_dir, fps, num_frames, debug=False, corrupt_files=[]):
+def extract_frame(video_info, save_dir, fps, num_frames, debug=False, corrupt_files=[]):
+    (video_file_path, sTime, eTime, caption_id) = video_info
     filename = os.path.basename(video_file_path)
-    vid, _ = os.path.splitext(filename)
+    vid = os.path.splitext(filename)[0]
     frame_name = f"{vid}_frame"
-    frame_save_path = join(save_dir, frame_name)
+    frame_save_dir = join(save_dir, caption_id)
+    frame_save_path = join(frame_save_dir, frame_name)
 
-    if (video_file_path not in corrupt_files and len(corrupt_files)):
-        # print(f"skipping {video_file_path}")
-        return
-    if len(corrupt_files):
-        print(f"exracting frames for {video_file_path}")
     launch_extract = True
     if launch_extract:
         os.makedirs(save_dir, exist_ok=True)
+        os.makedirs(frame_save_dir, exist_ok=True)
         # scale=width:height
         extract_frame_from_video(video_file_path, frame_save_path, fps=fps, num_frames=num_frames,
+                                 start_ts=sTime, end_ts=eTime,
                                  suppress_msg=not debug, other_args="")
 
 
@@ -117,61 +147,56 @@ def load_tsv_to_mem(tsv_file, sep='\t'):
 def extract_all_frames(video_root_dir, save_dir, fps, num_frames,
                        video_info_tsv, corrupt_files, num_workers, debug=False):
 
-    raw_video_info = load_tsv_to_mem(video_info_tsv)
-    videoFiles = []
-    for _, line_item in enumerate(raw_video_info):
-        input_file = line_item[0]
-        # input_file = input_file.replace('datasets','_datasets')
-        if os.path.isfile(input_file):
-            videoFiles.append(input_file)
-    if debug:
-        videoFiles = videoFiles[:1]
+    with open(video_info_tsv) as f_obj:
+        raw_video_info = json.load(f_obj)
 
-    if num_workers > 0:
-        from functools import partial
-        extract_frame_partial = partial(
-            extract_frame, fps=fps,
-            save_dir=save_dir, debug=debug, corrupt_files=corrupt_files,
-            num_frames=num_frames)
 
-        with mp.Pool(num_workers) as pool, tqdm(total=len(videoFiles)) as pbar:
-            for idx, _ in enumerate(
-                    pool.imap_unordered(
-                        extract_frame_partial, videoFiles, chunksize=8)):
-                pbar.update(1)
-    else:
-        for idx, d in tqdm(enumerate(videoFiles),
-                           total=len(videoFiles), desc="extracting frames from video"):
-            extract_frame(d, save_dir, fps=fps, debug=debug,corrupt_files=corrupt_files, num_frames=num_frames)
-            if debug and idx >= 10:
-                break
+        videoFiles = []
+        for _, line_item in enumerate(raw_video_info['annotations']):
+            vidName = line_item['vidName']
+            sTime = int(line_item['sTime'])
+            eTime = int(line_item['eTime'])
+            caption_id = str(line_item['id']).zfill(5)
+            
+            input_file = video_root_dir+vidName+'.mov'
+            # input_file = input_file.replace('datasets','_datasets')
+            if os.path.isfile(input_file):
+                videoFiles.append((input_file, sTime, eTime, caption_id))
+        if debug:
+            videoFiles = videoFiles[:1]
+
+        if num_workers > 0:
+            from functools import partial
+            extract_frame_partial = partial(
+                extract_frame, fps=fps,
+                save_dir=save_dir, debug=debug, corrupt_files=corrupt_files,
+                num_frames=num_frames)
+
+            with mp.Pool(num_workers) as pool, tqdm(total=len(videoFiles)) as pbar:
+                for idx, _ in enumerate(
+                        pool.imap_unordered(
+                            extract_frame_partial, videoFiles, chunksize=8)):
+                    pbar.update(1)
+        else:
+            for idx, d in tqdm(enumerate(videoFiles),
+                            total=len(videoFiles), desc="extracting frames from video"):
+                extract_frame(d, save_dir, fps=fps, debug=debug,corrupt_files=corrupt_files, num_frames=num_frames)
 
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--video_root_dir", type=str, help="video root dir")
-    parser.add_argument("--save_dir", type=str, help="save frame dir ")
-    parser.add_argument("--fps", type=str, default="1")
-    parser.add_argument("--num_frames", type=int, default=-1)
-    parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--corrupt_file_path", type=str, default="",
-                        help="dir saving output videos")
-    parser.add_argument("--video_info_tsv", type=str, default="",
-                        help="tsv saving all video path")
-    args = parser.parse_args()
-    args.save_dir = args.save_dir + str(args.num_frames) + 'frames'
-    corrupt_files = []
-    if os.path.exists(args.corrupt_file_path):
-        with open(args.corrupt_file_path) as f:
-            lines = f.readlines()
-            for ll in lines:
-                corrupt_files.append(ll.strip("\n"))
 
-    extract_all_frames(args.video_root_dir, args.save_dir, args.fps,
-                       args.num_frames, args.video_info_tsv, corrupt_files,
-                       num_workers=args.num_workers, debug=args.debug)
+    # FIXME: put the raw video path here
+    video_root_dir = "/data/hdd01/jinbu/BDDX/BDD-V/Videos/videos/"
+
+    # FIXME: the frame save dir
+    save_dir = 'data/32frames'
+
+    # FIXME: the caption annotation file
+    video_info_tsv = '/data/hdd01/jinbu/video_preprocess/code/data/processed/captions_BDDX.json'
+
+    extract_all_frames(video_root_dir, save_dir, 1,
+                       32, video_info_tsv, corrupt_files=None,
+                       num_workers=16, debug=False)
 
 
 if __name__ == '__main__':
